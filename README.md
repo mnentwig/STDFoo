@@ -6,3 +6,5 @@ Converts ATE .stdf.gz to binary float data, one file per TEST_NUM, e.g. to be ef
 * Fast: A dataset 832 Mb zipped, 30000 simulated DUTs with 2k testitems each is converted in around 12 s on a 2014 PC.
 
 Command line arguments: output folder (will be created), .stdf.gz file
+
+Note: The testcase generator requires freestdf-libstdf.
