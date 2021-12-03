@@ -1,4 +1,4 @@
-#STDFoo
+# STDFoo
 Converts ATE .stdf.gz to binary float data, one file per TEST_NUM, e.g. to be efficiently loaded into Octave.
 
 * Needs only a recent C++ compiler e.g. MinGW g++, no libraries required except libz 
