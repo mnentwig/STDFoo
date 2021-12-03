@@ -25,3 +25,4 @@ myOutDirectory will be created.
 - NaN is used for missing data (skipped tests)
 - The testcase generator requires freestdf-libstdf.
 - Endianness conversion is not implemented.
+- tested with -std=c++1z (ISO C++17) which seems to be the default in current MinGW
