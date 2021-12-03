@@ -15,7 +15,7 @@ myOutDirectory will be created.
 * units.txt: newline-separated UNIT for each TEST_NUM
 * lowLim.float: Low limit corresponding to TEST_NUM 
 * highLim.float: High limit corresponding to TEST_NUM
-* num.float: One file (32-bit single precision binary) with RESULT of all DUTs, in order of ejection (matches order of PRR records in file)
+* (num).float: One file (32-bit single precision binary) with RESULT of all DUTs, in order of ejection (matches order of PRR records in file). There will be as many files as TEST_NUMs.
 * hardbin.u16: The hardbin for each DUT
 * softbin.u16: The softbin for each DUT
 * site.u8: The site where each DUT was tested
