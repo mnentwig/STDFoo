@@ -1,3 +1,4 @@
+// g++ -O3 -DNDEBUG -o STDFoo.exe STDFoo.cpp -lz
 #include <iostream>
 #include <zlib.h>
 #include <mutex>
@@ -70,7 +71,6 @@ public:
 			// the circular buffer size)
 			memcpy(/*dest*/this->buf, /*src*/this->buf + this->nCirc, /*size*/
 			nExcess);
-//			cerr << "wraparound " << endl;
 		}
 		// did we reach the end of the circular buffer?
 		if (this->ixPush >= this->nCirc) {
@@ -110,7 +110,6 @@ protected:
 	unsigned int ixPush;
 	/** position of next pop */
 	unsigned int ixPop;
-	/** closed state means there will be no more data */
 	~circBuf() {
 		free(this->buf);
 	}
@@ -208,17 +207,14 @@ public:
 		unsigned int firstUnpadded =
 				dataIsValid ? dutCountBaseZero : dutCountBaseZero + 1;
 		while (this->nWritten < firstUnpadded) {
-			// cout << "dutCount\t" << dutCountBaseZero << " nWritten " << this->nWritten << endl;
 			this->fhandle.write((const char*) &this->defVal, sizeof(T));
 			++this->nWritten;
-			// cout << "site " << site << "\twriting default of size " << sizeof(T) << "\tsvc " << this->validCode[site] << " vs current " << validCode << endl;
 		}
 
 		// === write valid entry ===
 		if (dataIsValid) {
 			this->fhandle.write((const char*) &this->sitedata[site], sizeof(T));
 			++this->nWritten;
-			// } else { cout << "invalid data with svc " << this->validCode[site] << " vs current " << validCode << endl;
 		}
 	}
 	void close() {
@@ -435,7 +431,6 @@ public:
 		}
 
 		i->setData(site, this->siteValidCode[site], val);
-		// cout << "set data: site " << site << "\ttestnum\t" << testnum << "\tval\t" << val << endl;
 	}
 
 	void PRR(unsigned int site, uint16_t softbin, uint16_t hardbin) {
@@ -449,22 +444,18 @@ public:
 			return;
 		}
 
-#if 0
 		this->loggerSoftbin->setData(site, validCode, softbin);
 		this->loggerHardbin->setData(site, validCode, hardbin);
 		this->loggerSite->setData(site, validCode, site);
-#endif
 
 		// === write data ===
 		for (auto it = this->loggerTestitems.begin();
 				it != loggerTestitems.end(); ++it) {
 			(*it).second->write(site, this->dutCountBaseZero, validCode);
 		}
-#if 0
 		this->loggerSoftbin->write(site, this->dutCountBaseZero, validCode);
 		this->loggerHardbin->write(site, this->dutCountBaseZero, validCode);
 		this->loggerSite->write(site, this->dutCountBaseZero, validCode);
-#endif
 
 		this->siteValidCode[site] = 0;
 
@@ -535,9 +526,7 @@ int main(int argc, char **argv) {
 				bool eos = reader.getLargestPossiblePush(/*nBytesMin*/1, &nBytesMax,& dest);
 				if (eos)
 					break;
-				//std::cout << "can push " << nBytesMax << std::endl;
 				unsigned int nRead = gzread(f, (void*) dest, nBytesMax);
-				//std::cout << "nReadActual= " << nRead << std::endl;
 				reader.reportPush(nRead);
 			} // while not EOF
 			cout << "finished " << filename << "\n";
@@ -596,7 +585,7 @@ int main(int argc, char **argv) {
 	reader.shutdown();
 	w.close();
 #else
-
+	// multithreaded version (recommended)
 	std::filesystem::create_directory(dirname);
 	stdfWriter w(dirname);
 	for (int ixFile = 2; ixFile < argc; ++ixFile) {
@@ -635,7 +624,5 @@ int main(int argc, char **argv) {
 	} // for filearg
 	w.close();
 #endif
-
-	cout << "Done" << endl;
 	return 0;
 }
