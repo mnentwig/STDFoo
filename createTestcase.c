@@ -1,3 +1,4 @@
+#if DONT_HIDE_TESTCASE
 // from freestdf-libstdf examples folder
 // gcc -Wall createTestcase.c -I.. -I../include ../src/.libs/libstdf.a -lz -lbz2
 // from eclipse workspace (not src)
@@ -81,3 +82,4 @@ int main(int argc, char *argv[]){
   fflush(stdout);
   return EXIT_SUCCESS;
 }
+#endif

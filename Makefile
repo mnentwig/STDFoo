@@ -10,7 +10,8 @@ STDFooRefimpl.exe: STDFoo.cpp
 
 testcase.stdf.gz:
 	@echo "needs built freestdf-libstdf directory one level up. Note freeStdf_patches.png for necessary modifications"
-	gcc -o createTestcase.exe  -I../freestdf-libstdf -I../freestdf-libstdf/include createTestcase.c ../freestdf-libstdf/src/.libs/libstdf.a -lz -lbz2
+# -DDONT_HIDE_TESTCASE: build hack... normally file contents are hidden, as the required Eclipse setup is more complex
+	gcc -DDONT_HIDE_TESTCASE -o createTestcase.exe  -I../freestdf-libstdf -I../freestdf-libstdf/include createTestcase.c ../freestdf-libstdf/src/.libs/libstdf.a -lz -lbz2
 	@echo "writing STDF file. This may take a while"
 	./createTestcase.exe
 	@echo "Zipping STDF file. This may take a while"
