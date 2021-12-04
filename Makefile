@@ -2,11 +2,11 @@ all: STDFoo.exe
 # note: C++17 is default in GCC 11
 
 STDFoo.exe: STDFoo.cpp
-	g++ -o STDFoo.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+	g++ -static -o STDFoo.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
 	strip STDFoo.exe
 
 STDFooRefimpl.exe: STDFoo.cpp
-	g++ -DREFIMPL -o STDFooRefimpl.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+	g++ -static -DREFIMPL -o STDFooRefimpl.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
 
 testcase.stdf.gz:
 	@echo "needs built freestdf-libstdf directory one level up. Note freeStdf_patches.png for necessary modifications"
@@ -19,14 +19,25 @@ testcase.stdf.gz:
 
 tests: STDFoo.exe STDFooRefimpl.exe testcase.stdf.gz
 	@echo "running release version into out1"
-	time ./STDFoo.exe out1 testcase.stdf.gz
+	./STDFoo.exe out1 testcase.stdf.gz
 	@echo "running reference implementation into out2"
-	time ./STDFooRefimpl.exe out2 testcase.stdf.gz
+	./STDFooRefimpl.exe out2 testcase.stdf.gz
 	@echo "both out1, out2 folders should be bitwise identical"
 	diff -r out1 out2
 
+compat:
+# gcc 11-2 should successfully build with all those standards:
+# c++11 requires the POSIX "mkdir" variant
+	g++ -DPRE_CPP17 -static -o STDFoo.exe -std=c++11 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+	g++              -static -o STDFoo.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+	g++              -static -o STDFoo.exe -std=c++20 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+	g++              -static -o STDFoo.exe -std=c++23 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+
 clean:
-	rm -Rf STDFoo.exe createTestcase.exe out1 out2 testcase.stdf testcase.stdf.gz STDFooRefimpl.exe
+	rm -Rf STDFoo.exe createTestcase.exe out1 out2 testcase.stdf STDFooRefimpl.exe
 
+# testcase causes too much hassle to rebuild casually
+veryclean: clean
+	rm -Rf testcase.stdf.gz 
 
-.PHONY: clean
+.PHONY: clean compat

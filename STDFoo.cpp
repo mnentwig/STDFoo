@@ -1,17 +1,21 @@
+// with recent compiler (default: C++17 or up)
 // g++ -O3 -DNDEBUG -o STDFoo.exe STDFoo.cpp -lz
+#include <vector>
+#include <set>
+#include <unordered_set>
+#include <map>
+#include <unordered_map>
 #include <iostream>
-#include <zlib.h>
+#include <sstream>
+#include <fstream>
+#include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <assert.h>
-#include<thread>
 #include <stdint.h>
-#include <filesystem>
-#include <map>
 #include <cmath>
-#include <fstream>
-#include <set>
-#include <unordered_set>
+#include <zlib.h>
+#include <string>
 #define EXIT_SUCCESS 0 // stdlib.h
 #define EXIT_FAILURE 1 // stdlib.h
 using std::string;
@@ -23,6 +27,28 @@ void fail(const char *msg) {
 	cerr << "exiting" << endl;
 	exit(EXIT_FAILURE);
 }
+
+#ifdef PRE_CPP17
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+static void createDirectory(string dirname) {
+	struct stat st = { 0 };
+	if (stat(dirname.c_str(), &st) == -1) {
+		int val = mkdir(dirname.c_str());
+		if (val != 0){
+			fail("directory creation failed");
+		}
+	}
+}
+#else
+#include <filesystem>
+static void createDirectory(string dirname){
+	// Note: this function is available with C++17 and up. Some compilers may need additional libraries
+	// e.g. -lstdc++fs or -lc++fs.
+	std::filesystem::create_directory(dirname);
+}
+#endif
 
 /** fast circular buffer (near copy-free) with configurable minimum contiguous readback chunk size */
 class circBuf {
@@ -180,7 +206,7 @@ protected:
 };
 template<class T> class perPartLoggable {
 public:
-	perPartLoggable<T>(string fname, T defVal) {
+	perPartLoggable(std::string fname, T defVal) {
 		this->defVal = defVal;
 		this->fhandle.open(fname, std::ofstream::out | std::ofstream::binary);
 		if (!this->fhandle.is_open()) {
@@ -504,6 +530,7 @@ int main(int argc, char **argv) {
 		fail("");
 	}
 	string dirname(argv[1]);
+	createDirectory(dirname);
 
 #ifndef REFIMPL
 	unsigned int nCirc = 65600 * 128; // max. read-ahead (performance parameter. This number gives best performance on 5 GB testcase)
@@ -535,7 +562,6 @@ int main(int argc, char **argv) {
 		reader.shutdown();
 	});
 
-	std::filesystem::create_directory(dirname);
 	stdfWriter w(dirname);
 	std::thread recordParserThread([&reader, &w] {
 		bool startup = true;
@@ -586,7 +612,6 @@ int main(int argc, char **argv) {
 	w.close();
 #else
 	// multithreaded version (recommended)
-	std::filesystem::create_directory(dirname);
 	stdfWriter w(dirname);
 	for (int ixFile = 2; ixFile < argc; ++ixFile) {
 		string filename(argv[ixFile]);
