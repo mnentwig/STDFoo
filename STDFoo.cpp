@@ -11,13 +11,12 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#include <assert.h>
-#include <stdint.h>
 #include <cmath>
 #include <zlib.h>
 #include <string>
-#define EXIT_SUCCESS 0 // stdlib.h
-#define EXIT_FAILURE 1 // stdlib.h
+#include <cassert>
+#include <stdint.h>
+#include <stdlib.h>
 using std::string;
 using std::cerr;
 using std::cout;
@@ -28,6 +27,10 @@ void fail(const char *msg) {
 	exit(EXIT_FAILURE);
 }
 
+// ==========================
+// === Directory creation ===
+// ==========================
+// Note: could omit the std::filesystem variant entirely as POSIX works just fine but it seems cleaner in the long run
 #ifdef PRE_CPP17
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -43,21 +46,24 @@ static void createDirectory(string dirname) {
 }
 #else
 #include <filesystem>
-static void createDirectory(string dirname){
+static void createDirectory(string dirname) {
 	// Note: this function is available with C++17 and up. Some compilers may need additional libraries
 	// e.g. -lstdc++fs or -lc++fs.
 	std::filesystem::create_directory(dirname);
 }
 #endif
 
-/** fast circular buffer (near copy-free) with configurable minimum contiguous readback chunk size */
+// ===============
+// === circBuf ===
+// ===============
+/** fast circular buffer (near copy-free) with guaranteed contiguous readback chunk size (so that a full STDF record with max. 16 bit length plus header can be read at once) */
 class circBuf {
 public:
 	circBuf(unsigned int nCirc, unsigned int nContigRead) {
 		assert(nCirc >= nContigRead);
 		this->nCirc = nCirc;
 		this->nContigRead = nContigRead;
-		buf = (char*) malloc(this->nCirc + this->nContigRead - 1);
+		buf = (char*) malloc(this->nCirc + this->nContigRead - 1); // TBD use C++...
 		if (!buf)
 			throw new std::runtime_error("malloc failed");
 		this->nData = 0;
@@ -76,6 +82,7 @@ public:
 		*dest = this->buf + this->ixPush;
 	}
 
+	/** after preparing data entry with "getLargestPossiblePush" and copying the data, register the data here */
 	void reportPush(unsigned int n) {
 		assert(n <= this->nCirc - this->nData);
 		assert(n <= this->nCirc + this->nContigRead - 1 - this->ixPush);
@@ -111,6 +118,7 @@ public:
 		*src = this->buf + this->ixPop;
 	}
 
+	//* after using the data acquired by "getLargestPossiblePop()", remove part or all of it */
 	void pop(unsigned int n) {
 		assert(n <= this->nData);
 		this->ixPop += n;
@@ -141,7 +149,10 @@ protected:
 	}
 };
 
-/** multithreading layer over circBuf */
+// =======================
+// === blockingCircBuf ===
+// =======================
+/** multithreading layer over circBuf for parallel data input / output */
 class blockingCircBuf: circBuf {
 public:
 	blockingCircBuf(unsigned int nCirc, unsigned int nContigRead) :
@@ -205,17 +216,88 @@ protected:
 	bool isShutdown;
 };
 
-template<class T> class perPartLoggable {
+// =================
+// === doubleBuf ===
+// =================
+//** collects data to be written to a file in the background (main motivation: to deal with more files than available filehandles e.g. 2048 on Windows 8.1) */
+template<class T> class doubleBuf {
 public:
-	perPartLoggable(std::string fname, T defVal) {
-		this->defVal = defVal;
-		this->fhandle.open(fname, std::ofstream::out | std::ofstream::binary);
-		if (!this->fhandle.is_open()) {
-			cerr << "Failed to open '" << fname << "' for write" << endl;
+	doubleBuf(string filename) {
+		this->filename = filename;
+	}
+	void input(T val) {
+		std::lock_guard<std::mutex> lk(this->m);
+		this->buffer[this->bufPrimary].push_back(val);
+	}
+
+	//* writes contents to file, possibly from an external thread (at most one additional thread). Returns false if idle */
+	bool writeToFile() {
+		// === open file ===
+		std::ofstream fhandle = std::ofstream();
+		if (this->createFile) {
+			fhandle.open(this->filename,
+					std::ofstream::out | std::ofstream::binary);
+			// check for empty buffer only _after_ the file was created (which may take some time)
+			std::lock_guard<std::mutex> lk(this->m);
+			if (this->buffer[this->bufPrimary].size() < 1)
+				return false;
+
+		} else {
+			// check for empty buffer _before_ opening the file
+			std::lock_guard<std::mutex> lk(this->m);
+			if (this->buffer[this->bufPrimary].size() < 1)
+				return false;
+			fhandle.open(this->filename,
+					std::ofstream::out | std::ofstream::binary
+							| std::ofstream::app);
+		}
+		if (!fhandle.is_open()) {
+			cerr << "Failed to open '" << this->filename << "' for write"
+					<< endl;
 			fail("");
 		}
+		this->createFile = false;
+
+		std::vector<T> *b = &this->buffer[this->bufPrimary];
+
+		{ // === swap buffers ===
+			std::lock_guard<std::mutex> lk(this->m);
+			this->bufPrimary = (this->bufPrimary + 1) & 1;
+		} // RAII mutex
+
+		//=== write data ===
+		T *pFirstElem = &((*b)[0]);
+		fhandle.write((const char*) pFirstElem, b->size() * sizeof(T));
+		b->clear();
+		fhandle.close();
+		return true;
+	}
+protected:
+	/** where to write the data to */
+	string filename;
+	/** lock concurrent access */
+	std::mutex m;
+	/** data buffers */
+	std::vector<T> buffer[2];
+	/** which one of the two buffers is being written into */
+	unsigned int bufPrimary = 0;
+	/** startup flag */
+	bool createFile = true;
+};
+
+// =======================
+// === perPartLoggable ===
+// =======================
+//* data logging for one testitem. Manages data validity efficiently using timestamps */
+template<class T> class perPartLoggable {
+public:
+	perPartLoggable(std::string fname, T defVal) :
+			buf(fname) {
+		this->defVal = defVal;
 		this->nWritten = 0;
 	}
+
+	/** sets data with timestamp */
 	void setData(unsigned int site, unsigned int validCode, T value) {
 		this->addSiteIfMissing(site);
 		this->sitedata[site] = value;
@@ -234,45 +316,69 @@ public:
 		unsigned int firstUnpadded =
 				dataIsValid ? dutCountBaseZero : dutCountBaseZero + 1;
 		while (this->nWritten < firstUnpadded) {
-			this->fhandle.write((const char*) &this->defVal, sizeof(T));
+			this->buf.input(this->defVal);
 			++this->nWritten;
 		}
 
 		// === write valid entry ===
 		if (dataIsValid) {
-			this->fhandle.write((const char*) &this->sitedata[site], sizeof(T));
+			this->buf.input(this->sitedata[site]);
 			++this->nWritten;
 		}
 	}
+
+	/** optional write-to-file of buffered data from background thread. Returns true if data was written */
+	bool flush() {
+		return this->buf.writeToFile();
+	}
+
+	/** write-to-file from background thread. Possibly redundant with flush() but does no harm. */
 	void close() {
-		this->fhandle.close();
+		this->buf.writeToFile();
 	}
 
 protected:
 	void addSiteIfMissing(unsigned int site) {
 		if (site >= this->sitedata.size()) {
 			this->sitedata.resize(site + 1);
-			this->validCode.resize(site + 1, 0);
+			this->validCode.resize(site + 1, 0); // 0 is never valid
 		}
 	}
 
-	std::ofstream fhandle = std::ofstream();
+	//* collected data per site */
 	std::vector<T> sitedata;
+
+	//* timestamp of data per site */
 	std::vector<unsigned int> validCode;
+
+	//* how many DUTs have been recorded (to pad the output file for missing item */
 	unsigned int nWritten;
+
+	//* on PRR (binning/results/removal), data is written to buf which eventually writes to file */
+	doubleBuf<T> buf;
+
+	//* default value for invalid data */
 	T defVal;
 };
 
-/** writes items common to all DUTs (testnumber, testnames, limits, units) */
+// ====================
+// === commonLogger ===
+// ====================
+/** writes items common to all DUTs (testnumber, testnames, limits, units). Can afford one filehandle per item. */
 class commonLogger {
 public:
 	commonLogger(string dirname) {
 		this->directory = dirname;
 	}
+
+	//* checks for first occurrence of testnum PTR
 	bool isLogged(unsigned int testnum) {
-		// note: performance-critical
+		// STDF standard: "The first occurrence of this record also establishes the default values for all semi-static information about the test, such as limits, units, and scaling."
+		// Performance-critical, as "first occurrence" of testnum needs to be checked for every PTR record.
 		return this->loggedTests.find(testnum) != this->loggedTests.end();
 	}
+
+	//* records default values from first occurrence of PTR record
 	void log(unsigned int testnum, float lowLim, float highLim, string testname,
 			string unit) {
 		this->lowLim[testnum] = lowLim;
@@ -281,8 +387,10 @@ public:
 		this->unit[testnum] = unit;
 		this->loggedTests.insert(testnum);
 	}
+
+	//* writes collected data to files */
 	void close() {
-// === copy testnums to sorted set ===
+		// === copy testnums to sorted set ===
 		std::set<unsigned int> testnums;
 		for (auto it = this->loggedTests.begin(); it != this->loggedTests.end();
 				++it) {
@@ -340,6 +448,10 @@ protected:
 	std::unordered_set<unsigned int> loggedTests;
 };
 
+// ==================
+// === stdfWriter ===
+// ==================
+/** takes one input STDF record at a time, extracts detailed data and routes to various writers */
 class stdfWriter {
 public:
 	stdfWriter(string dirname) :
@@ -490,6 +602,17 @@ public:
 		++this->dutCountBaseZero;
 	}
 
+	bool flush() {
+		bool retVal = false;
+		for (auto it = this->loggerTestitems.begin();
+				it != this->loggerTestitems.end(); ++it)
+			retVal |= it->second->flush();
+		retVal |= this->loggerSoftbin->flush();
+		retVal |= this->loggerHardbin->flush();
+		retVal |= this->loggerSite->flush();
+		return retVal;
+	}
+
 	void close() {
 		for (unsigned int ix = 0; ix < this->siteValidCode.size(); ++ix)
 			if (this->siteValidCode[ix] != 0)
@@ -514,17 +637,29 @@ public:
 		delete this->loggerSoftbin;
 	}
 protected:
+	//* directory common to all written files
 	string directory;
+	//* data loggers per TEST_NUM
 	std::unordered_map<unsigned int, perPartLoggable<float>*> loggerTestitems;
+	//* log NUM_SITE per insertion
 	perPartLoggable<uint8_t> *loggerSite;
+	//* log HARD_BIN per insertion
 	perPartLoggable<uint16_t> *loggerHardbin;
+	//* log SOFT_BIN per insertion
 	perPartLoggable<uint16_t> *loggerSoftbin;
+	//* timestamp to monitor PIR-PTR*n-PRR sequence, also to recognize whether data in loggers is valid (motivation: advancing one timestamp is faster than invalidating thousands of records)
 	unsigned int nextValidCode;
+	//* timestamp per site for PIR-PTR*n-PRR sequence monitoring
 	std::vector<unsigned int> siteValidCode;
+	//* number of insertions = current length of all per-DUT results
 	unsigned int dutCountBaseZero;
+	//* logger for non-per-DUT data e.g. testnames
 	commonLogger cmLog;
 };
 
+// ============
+// === main ===
+// ============
 int main(int argc, char **argv) {
 	cout.precision(9);
 	_setmaxstdio(2048); // can get estimate on max. number of handles
@@ -537,6 +672,7 @@ int main(int argc, char **argv) {
 	createDirectory(dirname);
 
 #ifndef REFIMPL
+	// === multithreaded version (recommended) ===
 	unsigned int nCirc = 65600 * 128; // max. read-ahead (performance parameter. This number gives best performance on 5 GB testcase)
 	unsigned int nChunkMax = 65535 + 4; // max. single pop size. STDF 4-byte header is not included in 16-bit count
 
@@ -607,15 +743,27 @@ int main(int argc, char **argv) {
 			w.stdfRecord((unsigned char*) ptr);
 			reader.pop(recordSize);
 		} // while true
-	}
-	);
+	});
+
+	bool backgroundWriteRunning = true;
+	std::thread backgroundWriterThread([&w, &backgroundWriteRunning] {
+		while (backgroundWriteRunning) {
+			bool wroteSomeData = w.flush();
+			// suspend if idle (don't go into a spin loop if inbound data is slow).
+			// Note: Could use a condition variable signaled on data but sleep() is simple and stupid with minimal overhead.
+			if (!wroteSomeData)
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
+	});
 
 	readerThread.join();
 	recordParserThread.join();
 	reader.shutdown();
+	backgroundWriteRunning = false;
+	backgroundWriterThread.join();
 	w.close();
 #else
-	// multithreaded version (recommended)
+	// === single-threaded reference implementation ===
 	stdfWriter w(dirname);
 	for (int ixFile = 2; ixFile < argc; ++ixFile) {
 		string filename(argv[ixFile]);
