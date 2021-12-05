@@ -662,7 +662,6 @@ protected:
 // ============
 int main(int argc, char **argv) {
 	cout.precision(9);
-	_setmaxstdio(2048); // can get estimate on max. number of handles
 	if (argc <= 2) {
 		cerr << "usage: " << argv[0] << " outputfolder inputfile.stdf.gz"
 				<< endl;
