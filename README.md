@@ -1,7 +1,7 @@
 # STDFoo
 Converts ATE .stdf.gz to binary float data, one file per TEST_NUM, e.g. to be efficiently loaded into Octave.
 
-* Needs only a recent C++ compiler e.g. MinGW g++, no libraries required except libz 
+* pure C++, needs only a recent compiler e.g. from MinGW, no libraries required except libz 
 * Multithreaded, which gives about 40 % performance boost (note: try -DREFIMPL and compare)
 * Fast: A dataset 832 Mb zipped, 30000 simulated DUTs with 2k testitems each is converted in around 12 s on a 2013 PC.
 * compatible/future-proof: Compiles with -std=(c++11, c++17, c++20, c++23)
