@@ -8,7 +8,11 @@
 #include <internal/headers.h>
 
 int main(int argc, char *argv[]){
+#ifdef SMALL_TESTCASE
+  stdf_file *f = stdf_open_ex("testcaseSmall.stdf", STDF_OPTS_WRITE | STDF_OPTS_CREATE, 0664);
+#else
   stdf_file *f = stdf_open_ex("testcase.stdf", STDF_OPTS_WRITE | STDF_OPTS_CREATE, 0664);
+#endif
   if (!f) fprintf(stderr, "failed to open output file\n");
      
   // === write FAR ===
@@ -25,7 +29,14 @@ int main(int argc, char *argv[]){
   empty[0] = (unsigned char) (strlen(empty) - 1);
   int partId = 1;
   int siteMax = 4;
-  while (partId < 30000) {
+#ifdef SMALL_TESTCASE
+  int partIdMax = 30;
+  int testNumMax = 20;
+#else
+  int partIdMax = 30000;
+  int testNumMax = 2000;
+#endif
+  while (partId < partIdMax) {
     for (int site = 1; site <= siteMax; ++site){ // === write PIR (insertion) ===
       stdf_rec_pir a = { };
       a.HEAD_NUM = 1;
@@ -35,7 +46,7 @@ int main(int argc, char *argv[]){
     }
     
     for (int site = 1; site <= siteMax; ++site) {      
-      for (int testNum = 11; testNum < 2000; testNum += 1) {
+      for (int testNum = 11; testNum < testNumMax; testNum += 1) {
 	// === write test data ===
 	stdf_rec_ptr a = { };
 	stdf_init_header(a.header, STDF_REC_PTR);

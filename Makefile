@@ -17,6 +17,15 @@ testcase.stdf.gz:
 	@echo "Zipping STDF file. This may take a while"
 	gzip testcase.stdf
 
+testcaseSmall.stdf.gz:
+	@echo "needs built freestdf-libstdf directory one level up. Note freeStdf_patches.png for necessary modifications"
+# -DDONT_HIDE_TESTCASE: build hack... normally file contents are hidden, as the required Eclipse setup is more complex
+	gcc -DSMALL_TESTCASE -DDONT_HIDE_TESTCASE -o createTestcaseSmall.exe  -I../freestdf-libstdf -I../freestdf-libstdf/include createTestcase.c ../freestdf-libstdf/src/.libs/libstdf.a -lz -lbz2
+	@echo "writing STDF file. This may take a while"
+	./createTestcaseSmall.exe
+	@echo "Zipping STDF file. This may take a while"
+	gzip testcaseSmall.stdf
+
 tests: STDFoo.exe STDFooRefimpl.exe testcase.stdf.gz
 	@echo "running release version into out1"
 	./STDFoo.exe out1 testcase.stdf.gz
@@ -38,6 +47,6 @@ clean:
 
 # testcase causes too much hassle to rebuild casually
 veryclean: clean
-	rm -Rf testcase.stdf.gz 
+	rm -Rf testcase.stdf.gz testcaseSmall.stdf.gz
 
 .PHONY: clean compat
