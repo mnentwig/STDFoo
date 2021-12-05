@@ -204,6 +204,7 @@ protected:
 	/** indicates that no new data will arrive (and no new data will be accepted) */
 	bool isShutdown;
 };
+
 template<class T> class perPartLoggable {
 public:
 	perPartLoggable(std::string fname, T defVal) {
@@ -508,6 +509,9 @@ public:
 				it != this->loggerTestitems.end(); ++it) {
 			delete it->second;
 		}
+		delete this->loggerSite;
+		delete this->loggerHardbin;
+		delete this->loggerSoftbin;
 	}
 protected:
 	string directory;
