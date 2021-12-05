@@ -10,6 +10,7 @@ Converts ATE .stdf.gz to binary float data, one file per TEST_NUM, e.g. to be ef
 
 ### Command line arguments: 
 STDfoo.exe myOutDirectory myInputfile1.stdf.gz myInputfile2.stdf.gz myInputfile3.stdf.gz ...
+	
 The output directory will be created.
 
 ### Results in myOutputDirectory:
@@ -27,5 +28,4 @@ The output directory will be created.
 - Scaling modifiers are not applied. The output data is bitwise identical to the original file contents.
 - NaN is used for missing data (skipped tests)
 - The testcase generator requires freestdf-libstdf.
-- Endianness conversion is not implemented.
-- tested with -std=c++1z (ISO C++17) which seems to be the default in current MinGW
+- Endianness conversion is not implemented, if somewhat prepared for (build separate executable for speed with reversed byte order in "stdfWriter::decode()")
