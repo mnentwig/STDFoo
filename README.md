@@ -1,7 +1,7 @@
 # STDFoo
 a) Converts ATE .stdf.gz to binary float data, one file per TEST_NUM.
 
-b) Imports binary data to Octave efficiently (load-on-demand)
+b) Imports resulting binary data to Octave _efficiently_ (load-on-demand, designed for xy GB-size datasets or beyond)
 
 * used STDF fields are *PIR* (insertion), *PTR* (individual test data), *PRR* (results/binning). All other records are skipped
 * pure C++, needs only a recent compiler e.g. from MinGW, no libraries required except libz. 
