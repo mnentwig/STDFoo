@@ -27,6 +27,16 @@ void fail(const char *msg) {
 	exit(EXIT_FAILURE);
 }
 
+//* extracts T from ptr (no alignment required) */
+template<class T> static T decode(unsigned char *&ptr) {
+	T retval;
+	unsigned char *dest = (unsigned char*) &retval;
+	for (unsigned int ix = 0; ix < sizeof(T); ++ix) {
+		*(dest++) = *(ptr++);
+	}
+	return retval;
+}
+
 // ==========================
 // === Directory creation ===
 // ==========================
@@ -63,7 +73,7 @@ public:
 		assert(nCirc >= nContigRead);
 		this->nCirc = nCirc;
 		this->nContigRead = nContigRead;
-		buf = (char*) malloc(this->nCirc + this->nContigRead - 1); // TBD use C++...
+		buf = (unsigned char*) malloc(this->nCirc + this->nContigRead - 1); // TBD use C++...
 		if (!buf)
 			throw new std::runtime_error("malloc failed");
 		this->nData = 0;
@@ -72,7 +82,7 @@ public:
 	}
 
 	//* returns max. number of bytes to input into readDest, to be reported afterwards via reportPush() */
-	void getLargestPossiblePush(unsigned int *nBytesMax, char **dest) {
+	void getLargestPossiblePush(unsigned int *nBytesMax, unsigned char **dest) {
 		// limited by remaining circular capacity
 		unsigned int n = this->nCirc - this->nData;
 		// in addition, don't overrun the buffer end by more than the excess capacity (which is nContigRead)
@@ -113,7 +123,7 @@ public:
 	}
 
 	//* returns max. number of bytes to take from data, to be reported afterwards via reportPop() */
-	void getLargestPossiblePop(unsigned int *nBytesMax, char **src) {
+	void getLargestPossiblePop(unsigned int *nBytesMax, unsigned char **src) {
 		*nBytesMax = std::min(this->nData, this->nContigRead);
 		*src = this->buf + this->ixPop;
 	}
@@ -132,7 +142,7 @@ public:
 	}
 protected:
 	/** circular buffer */
-	char *buf;
+	unsigned char *buf;
 	/** size of the circular buffer (maximum read-ahead) */
 	unsigned int nCirc;
 	/** maximum read size to retrieve at one time*/
@@ -162,7 +172,7 @@ public:
 
 	/* allows push of up to nBytesMax (which will be at least nBytesMin). Returns true if shutdown. */
 	bool getLargestPossiblePush(unsigned int nBytesMin, unsigned int *nBytesMax,
-			char **readDest) {
+			unsigned char **readDest) {
 		assert(nBytesMin <= this->nContigRead);
 		std::unique_lock<std::mutex> lk(this->m);
 		while (true) {
@@ -181,7 +191,7 @@ public:
 	}
 	/** blocks until at least nBytesMin are available. Returns true (eos) in shutdown once all data has been consumed (non-zero nBytesMax < nBytesMin if trailing bytes) */
 	bool getLargestPossiblePop(unsigned int nBytesMin, unsigned int *nBytesMax,
-			char **readDest) {
+			unsigned char **readDest) {
 		assert(nBytesMin <= this->nContigRead);
 		std::unique_lock<std::mutex> lk(this->m);
 		while (true) {
@@ -467,15 +477,6 @@ public:
 		this->dutCountBaseZero = 0;
 	}
 
-	template<class T> static T decode(unsigned char *&ptr) {
-		T retval;
-		unsigned char *dest = (unsigned char*) &retval;
-		for (unsigned int ix = 0; ix < sizeof(T); ++ix) {
-			*(dest++) = *(ptr++);
-		}
-		return retval;
-	}
-
 	static string decodeString(unsigned char *&ptr) {
 		uint8_t len = *(ptr++);
 		const char *pStr = (const char*) ptr;
@@ -530,9 +531,9 @@ public:
 			}
 			break;
 		}
-		default:
-			cerr << "warning: unsupported record (OK outside testcases)"
-					<< endl;
+		default: {
+			// cerr << "warning: unsupported record (OK outside testcases)" << endl;
+		}
 		}
 	}
 
@@ -637,23 +638,23 @@ public:
 		delete this->loggerSoftbin;
 	}
 protected:
-	//* directory common to all written files
+//* directory common to all written files
 	string directory;
-	//* data loggers per TEST_NUM
+//* data loggers per TEST_NUM
 	std::unordered_map<unsigned int, perPartLoggable<float>*> loggerTestitems;
-	//* log NUM_SITE per insertion
+//* log NUM_SITE per insertion
 	perPartLoggable<uint8_t> *loggerSite;
-	//* log HARD_BIN per insertion
+//* log HARD_BIN per insertion
 	perPartLoggable<uint16_t> *loggerHardbin;
-	//* log SOFT_BIN per insertion
+//* log SOFT_BIN per insertion
 	perPartLoggable<uint16_t> *loggerSoftbin;
-	//* timestamp to monitor PIR-PTR*n-PRR sequence, also to recognize whether data in loggers is valid (motivation: advancing one timestamp is faster than invalidating thousands of records)
+//* timestamp to monitor PIR-PTR*n-PRR sequence, also to recognize whether data in loggers is valid (motivation: advancing one timestamp is faster than invalidating thousands of records)
 	unsigned int nextValidCode;
-	//* timestamp per site for PIR-PTR*n-PRR sequence monitoring
+//* timestamp per site for PIR-PTR*n-PRR sequence monitoring
 	std::vector<unsigned int> siteValidCode;
-	//* number of insertions = current length of all per-DUT results
+//* number of insertions = current length of all per-DUT results
 	unsigned int dutCountBaseZero;
-	//* logger for non-per-DUT data e.g. testnames
+//* logger for non-per-DUT data e.g. testnames
 	commonLogger cmLog;
 };
 
@@ -688,7 +689,7 @@ int main(int argc, char **argv) {
 
 			while (!gzeof(f)) {
 				unsigned int nBytesMax;
-				char *dest;
+				unsigned char *dest;
 				bool eos = reader.getLargestPossiblePush(/*nBytesMin*/1, &nBytesMax,& dest);
 				if (eos)
 					break;
@@ -705,7 +706,7 @@ int main(int argc, char **argv) {
 	std::thread recordParserThread([&reader, &w] {
 		bool startup = true;
 		while (true) {
-			char *ptr;
+			unsigned char *ptr;
 			unsigned int nBytesAvailable;
 			bool shutdown = reader.getLargestPossiblePop(2, &nBytesAvailable, &ptr);
 			if (shutdown) {
@@ -716,23 +717,23 @@ int main(int argc, char **argv) {
 				return;
 			}
 
-			unsigned int b0 = (unsigned int) *(ptr);
-			unsigned int b1 = (unsigned int) *(ptr + 1);
-			unsigned int recordSize = b0 + (b1 << 8) + 4; // include header
+			unsigned char *ptrCopy = ptr; // don't want decode() to advance pointer
+			uint16_t recordSize = decode<uint16_t>(ptrCopy);
+			unsigned int recordSizeWithHeader = recordSize + 4;
 			if (startup) {
-				if (recordSize == 2 << 8) {
+				if (recordSize == 0x0200) {
 					cerr << "Big Endian STDF file format is not supported"
 							<< endl;
 					fail("");
-				} else if (recordSize != 2 + 4) {
+				} else if (recordSize != 0x0002) {
 					cerr << "invalid STDF file" << endl;
 					fail("");
 				}
 				startup = false;
 			}
-			while (nBytesAvailable < recordSize) {
-				shutdown = reader.getLargestPossiblePop(2, &nBytesAvailable,
-						&ptr);
+			while (nBytesAvailable < recordSizeWithHeader) {
+				shutdown = reader.getLargestPossiblePop(recordSizeWithHeader,
+						&nBytesAvailable, &ptr);
 				if (shutdown) {
 					cout << "parser closing with " << nBytesAvailable
 							<< " dangling bytes" << endl;
@@ -740,7 +741,7 @@ int main(int argc, char **argv) {
 				}
 			}
 			w.stdfRecord((unsigned char*) ptr);
-			reader.pop(recordSize);
+			reader.pop(recordSizeWithHeader);
 		} // while true
 	});
 
@@ -782,12 +783,25 @@ int main(int argc, char **argv) {
 				cerr << "read failed tried 4 (header) got " << nRead << endl;
 				fail("");
 			}
-			unsigned int b0 = (unsigned int) buf[0];
-			unsigned int b1 = (unsigned int) buf[1];
-			unsigned int recordSize = b0 + (b1 << 8);
-			nRead = gzread(f, (void*) &buf[4], recordSize);
+
+			unsigned char* ptrCopy = ptr; // don't want decode() to advance pointer
+			uint16_t recordSize = decode<uint16_t>(ptrCopy);
+			unsigned int recordSizeWithHeader = recordSize+4;
+			if (startup) {
+				if (recordSize == 0x0200) {
+					cerr << "Big Endian STDF file format is not supported"
+							<< endl;
+					fail("");
+				} else if (recordSize != 0x0002) {
+					cerr << "invalid STDF file" << endl;
+					fail("");
+				}
+				startup = false;
+			}
+			while (nBytesAvailable < recordSizeWithHeader) {
+			nRead = gzread(f, (void*) &buf[4], recordSizeWithHeader);
 			if (nRead != recordSize) {
-				cerr << "read failed tried body " << recordSize << " got "
+				cerr << "read failed tried " << recordSizeWithHeader << " got "
 						<< nRead << endl;
 				fail("");
 			}
