@@ -46,6 +46,7 @@ function o = STDFoo(folder)
   
   o.getDataByTestnum = @getDataByTestnum;
   o.getTestnums=@getTestnums;
+  o.getTestnames=@getTestnames;
   o.getUnits=@getUnits;
   o.getLowLim=@getLowLim;
   o.getHighLim=@getHighLim;
@@ -71,6 +72,9 @@ function celldata = readString(folder, fname)
   celldata = {};
   fname = [folder, '/', fname];
   h = fopen(fname, 'rb');
+  if (h < 0)
+    error('failed to open "%s"', fname);
+  endif
   while (true)
     line = fgetl(h);
     if (line == -1) 
