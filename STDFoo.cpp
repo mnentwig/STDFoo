@@ -437,6 +437,18 @@ public:
 			this->h.write((const char*) &tmp, sizeof(tmp));
 		}
 		this->closeHandle();
+
+		// human-readable summary in csv format
+		this->openHandle(this->directory + "/testlist.txt");
+		this->h << "TEST_NUM\tTEST_TXT\tUNITS\tLO_LIMIT\tHI_LIMIT\n";
+		for (auto it = testnums.begin(); it != testnums.end(); ++it) {
+			this->h << (*it) << "\t" //
+					<< this->testname[*it] << "\t" //
+					<< this->unit[*it] << "\t" //
+					<< this->lowLim[*it] << "\t" //
+					<< this->highLim[*it] << "\n";
+		}
+		this->closeHandle();
 	}
 protected:
 	void openHandle(string fname) {
@@ -469,11 +481,11 @@ public:
 		this->directory = dirname;
 		this->nextValidCode = 1; // 0 is "invalid"
 		this->loggerSite = new perPartLoggable<uint8_t>(
-				dirname + "/" + "site.u8", 255);
+				dirname + "/" + "site.uint8", 255);
 		this->loggerHardbin = new perPartLoggable<uint16_t>(
-				dirname + "/" + "hardbin.u16", 65535);
+				dirname + "/" + "hardbin.uint16", 65535);
 		this->loggerSoftbin = new perPartLoggable<uint16_t>(
-				dirname + "/" + "softbin.u16", 65535);
+				dirname + "/" + "softbin.uint16", 65535);
 		this->dutCountBaseZero = 0;
 	}
 
