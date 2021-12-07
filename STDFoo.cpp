@@ -209,11 +209,13 @@ public:
 		this->circBuf::pop(n);
 		cvPop.notify_one();
 	}
-	void shutdown() {
+	void setShutdown(bool shutdown) {
 		std::lock_guard<std::mutex> lk(this->m);
-		this->isShutdown = true;
-		cvPush.notify_one();
-		cvPop.notify_one();
+		this->isShutdown = shutdown;
+		if (shutdown) {
+			cvPush.notify_one();
+			cvPop.notify_one();
+		}
 	}
 protected:
 	/** thread protection of all internals */
@@ -438,6 +440,28 @@ public:
 		}
 		this->closeHandle();
 
+		this->openHandle(this->directory + "/filenames.txt");
+		for (auto it = this->filenames.begin(); it != this->filenames.end();
+				++it)
+			this->h << *it << "\n";
+		this->closeHandle();
+
+		this->openHandle(this->directory + "/dutsPerFile.uint32");
+		for (auto it = this->dutsPerFile.begin(); it != this->dutsPerFile.end();
+				++it) {
+			uint32_t tmp = *it;
+			this->h.write((const char*) &tmp, sizeof(tmp));
+		}
+		this->closeHandle();
+
+		// human-readable file / lot summary in csv format
+		this->openHandle(this->directory + "/filelist.txt");
+		this->h << "filename\tnDuts\n";
+		for (unsigned int ix = 0; ix < this->filenames.size(); ++ix)
+			this->h << this->filenames[ix] << "\t" << this->dutsPerFile[ix]
+					<< "\n";
+		this->closeHandle();
+
 		// human-readable summary in csv format
 		this->openHandle(this->directory + "/testlist.txt");
 		this->h << "TEST_NUM\tTEST_TXT\tUNITS\tLO_LIMIT\tHI_LIMIT\n";
@@ -449,6 +473,10 @@ public:
 					<< this->highLim[*it] << "\n";
 		}
 		this->closeHandle();
+	}
+	void reportFile(string filename, unsigned int dutsPerFile) {
+		this->filenames.push_back(filename);
+		this->dutsPerFile.push_back(dutsPerFile);
 	}
 protected:
 	void openHandle(string fname) {
@@ -468,6 +496,8 @@ protected:
 	std::unordered_map<unsigned int, string> testname;
 	std::unordered_map<unsigned int, string> unit;
 	std::unordered_set<unsigned int> loggedTests;
+	std::vector<string> filenames;
+	std::vector<unsigned int> dutsPerFile;
 };
 
 // ==================
@@ -487,15 +517,21 @@ public:
 		this->loggerSoftbin = new perPartLoggable<uint16_t>(
 				dirname + "/" + "softbin.uint16", 65535);
 		this->dutCountBaseZero = 0;
+		this->dutsReported = 0;
 	}
 
 	static string decodeString(unsigned char *&ptr) {
+		// note: STDF string may use less space than advertised by len byte, if null-terminated
+		char buf[255 + 1];
 		uint8_t len = *(ptr++);
-		const char *pStr = (const char*) ptr;
-		ptr += len;
-		if (len == 0)
-			pStr = "null";
-		return std::string(pStr);
+		for (unsigned int ix = 0; ix < len; ++ix) {
+			buf[ix] = *(ptr++);
+		}
+		buf[len] = 0;
+		if (buf[0] == 0)
+			return std::string("null");
+		else
+			return std::string(&buf[0]);
 	}
 
 	void stdfRecord(unsigned char *ptr) {
@@ -640,6 +676,12 @@ public:
 		this->loggerSite->close();
 		this->cmLog.close();
 	}
+
+	void reportFile(string filename) {
+		this->cmLog.reportFile(filename,
+				this->dutCountBaseZero - this->dutsReported);
+		this->dutsReported = this->dutCountBaseZero;
+	}
 	~stdfWriter() {
 		for (auto it = this->loggerTestitems.begin();
 				it != this->loggerTestitems.end(); ++it) {
@@ -668,7 +710,106 @@ protected:
 	unsigned int dutCountBaseZero;
 //* logger for non-per-DUT data e.g. testnames
 	commonLogger cmLog;
+	unsigned int dutsReported;
 };
+
+template<class T> class pingPongMailbox {
+public:
+	enum state_e {
+		PING, PONG
+	};
+	state_e state = PING;
+	pingPongMailbox() {
+	}
+	state_e getState() {
+		std::lock_guard<std::mutex> lk(this->m);
+		return this->state;
+	}
+	/** note: state determines payload is valid. Recipient must alter state from "HAVE_WORK" to acknowledge reception */
+	T getPayload() {
+		std::lock_guard<std::mutex> lk(this->m);
+		return this->payload;
+	}
+	void wait() {
+		std::unique_lock<std::mutex> lk(this->m);
+		this->evt.wait(lk);
+	}
+	void setState(state_e state, T payload) {
+		std::lock_guard<std::mutex> lk(this->m);
+		this->state = state;
+		this->payload = payload;
+		this->evt.notify_all();
+	}
+protected:
+	std::mutex m;
+	std::condition_variable evt;
+	T payload;
+};
+
+void main_reader(string filename, blockingCircBuf &reader) {
+	// === feed file ===
+	gzFile_s *f = gzopen(filename.c_str(), "rb");
+	if (!f) {
+		cerr << "failed to open '" << filename << "' for read";
+		fail("");
+	}
+	while (!gzeof(f)) {
+		unsigned int nBytesMax;
+		unsigned char *dest;
+		bool eos = reader.getLargestPossiblePush(/*nBytesMin*/1, &nBytesMax,
+				&dest);
+		if (eos)
+			break;
+		unsigned int nRead = gzread(f, (void*) dest, nBytesMax);
+		reader.reportPush(nRead);
+	} // while not EOF
+	cout << "finished " << filename << endl;
+	gzclose(f);
+}
+
+void main_writer(string filename, blockingCircBuf &reader, stdfWriter &writer) {
+	bool startup = true;
+	while (true) {
+		unsigned char *ptr;
+		unsigned int nBytesAvailable;
+		bool shutdown = reader.getLargestPossiblePop(2, &nBytesAvailable, &ptr);
+		if (shutdown) {
+			if (nBytesAvailable > 0)
+				cerr << "Warning: " << filename
+						<< " has incorrect format (records not complete)"
+						<< endl;
+			break;
+		}
+
+		unsigned char *ptrCopy = ptr; // don't want decode() to advance pointer
+		uint16_t recordSize = decode<uint16_t>(ptrCopy);
+		unsigned int recordSizeWithHeader = recordSize + 4;
+		if (startup) {
+			if (recordSize == 0x0200) {
+				cerr << "Big Endian STDF file format is not supported" << endl;
+				fail("");
+			} else if (recordSize != 0x0002) {
+				cerr << "invalid STDF file" << endl;
+				fail("");
+			}
+			startup = false;
+		}
+		while (nBytesAvailable < recordSizeWithHeader) {
+			shutdown = reader.getLargestPossiblePop(recordSizeWithHeader,
+					&nBytesAvailable, &ptr);
+			if (shutdown) {
+				if (nBytesAvailable > 0)
+					cerr << "Warning: " << filename
+							<< " has incorrect format (records not complete)"
+							<< endl;
+				break;
+			}
+		}
+		writer.stdfRecord((unsigned char*) ptr);
+		reader.pop(recordSizeWithHeader);
+	} // while true (records in file)
+	writer.reportFile(filename);
+}
 
 // ============
 // === main ===
@@ -683,148 +824,76 @@ int main(int argc, char **argv) {
 	string dirname(argv[1]);
 	createDirectory(dirname);
 
-#ifndef REFIMPL
 	// === multithreaded version (recommended) ===
 	unsigned int nCirc = 65600 * 128; // max. read-ahead (performance parameter. This number gives best performance on 5 GB testcase)
 	unsigned int nChunkMax = 65535 + 4; // max. single pop size. STDF 4-byte header is not included in 16-bit count
+	pingPongMailbox<string> mailbox;
 
 	blockingCircBuf reader(nCirc, nChunkMax);
-	std::thread readerThread([&argv, &argc, &reader] {
+	std::thread readerThread([&argv, &argc, &reader, &mailbox] {
 		for (int ixFile = 2; ixFile < argc; ++ixFile) {
 			string filename(argv[ixFile]);
 
-			gzFile_s *f = gzopen(filename.c_str(), "rb");
-			if (!f) {
-				cerr << "failed to open '" << filename << "' for read";
-				fail("");
+			// === wait for downstream processing to finish ===
+			// this thread owns the "PING" end of the mailbox
+			while (mailbox.getState() != mailbox.PING) {
+				mailbox.wait();
 			}
 
-			while (!gzeof(f)) {
-				unsigned int nBytesMax;
-				unsigned char *dest;
-				bool eos = reader.getLargestPossiblePush(/*nBytesMin*/1, &nBytesMax,& dest);
-				if (eos)
-					break;
-				unsigned int nRead = gzread(f, (void*) dest, nBytesMax);
-				reader.reportPush(nRead);
-			} // while not EOF
-			cout << "finished " << filename << "\n";
-			gzclose(f);
+			reader.setShutdown(false);
+
+			// === notify downstream processing ===
+			mailbox.setState(mailbox.PONG, filename);
+
+			// === feed data ===
+			main_reader(filename, reader);
+			reader.setShutdown(true);
 		}
-		reader.shutdown();
+
+		while (mailbox.getState() != mailbox.PING) {
+			mailbox.wait();
+		}
+
+		// === notify downstream processing there is no more data ===
+		mailbox.setState(mailbox.PONG, /*agreed protocol: empty string => done*/
+		"");
 	});
 
-	stdfWriter w(dirname);
-	std::thread recordParserThread([&reader, &w] {
-		bool startup = true;
+	stdfWriter writer(dirname);
+	std::thread recordParserThread([&reader, &writer, &mailbox] {
 		while (true) {
-			unsigned char *ptr;
-			unsigned int nBytesAvailable;
-			bool shutdown = reader.getLargestPossiblePop(2, &nBytesAvailable, &ptr);
-			if (shutdown) {
-				if (nBytesAvailable > 0) {
-					cerr << "Warning: file closing with " << nBytesAvailable
-							<< " dangling bytes" << endl;
-				}
-				return;
+			// === wait for news ===
+			// this thread owns the "PONG" end of the mailbox
+			while (mailbox.getState() != mailbox.PONG) {
+				mailbox.wait();
 			}
-
-			unsigned char *ptrCopy = ptr; // don't want decode() to advance pointer
-			uint16_t recordSize = decode<uint16_t>(ptrCopy);
-			unsigned int recordSizeWithHeader = recordSize + 4;
-			if (startup) {
-				if (recordSize == 0x0200) {
-					cerr << "Big Endian STDF file format is not supported"
-							<< endl;
-					fail("");
-				} else if (recordSize != 0x0002) {
-					cerr << "invalid STDF file" << endl;
-					fail("");
-				}
-				startup = false;
+			string filename = mailbox.getPayload();
+			if (filename.length() == 0) {
+				break;
 			}
-			while (nBytesAvailable < recordSizeWithHeader) {
-				shutdown = reader.getLargestPossiblePop(recordSizeWithHeader,
-						&nBytesAvailable, &ptr);
-				if (shutdown) {
-					cout << "parser closing with " << nBytesAvailable
-							<< " dangling bytes" << endl;
-					return;
-				}
-			}
-			w.stdfRecord((unsigned char*) ptr);
-			reader.pop(recordSizeWithHeader);
-		} // while true
-	});
+			main_writer(filename, reader, writer);
+			mailbox.setState(mailbox.PING, /*don't-care return payload*/"");
+		}
+	}
+	);
 
 	bool backgroundWriteRunning = true;
-	std::thread backgroundWriterThread([&w, &backgroundWriteRunning] {
+	std::thread backgroundWriterThread([&writer, &backgroundWriteRunning] {
 		while (backgroundWriteRunning) {
-			bool wroteSomeData = w.flush();
+			bool wroteSomeData = writer.flush();
 			// suspend if idle (don't go into a spin loop if inbound data is slow).
 			// Note: Could use a condition variable signaled on data but sleep() is simple and stupid with minimal overhead.
 			if (!wroteSomeData)
 				std::this_thread::sleep_for(std::chrono::milliseconds(1));
 		}
-	});
+	}
+	);
 
 	readerThread.join();
 	recordParserThread.join();
-	reader.shutdown();
+	reader.setShutdown(true); // redundant unless no files
 	backgroundWriteRunning = false;
 	backgroundWriterThread.join();
-	w.close();
-#else
-	// === single-threaded reference implementation ===
-	stdfWriter w(dirname);
-	for (int ixFile = 2; ixFile < argc; ++ixFile) {
-		string filename(argv[ixFile]);
-
-		gzFile_s *f = gzopen(filename.c_str(), "rb");
-		if (!f) {
-			cerr << "failed to open '" << filename << "' for read";
-			fail("");
-		}
-
-		while (!gzeof(f)) {
-			unsigned char buf[65539];
-			unsigned int nRead = gzread(f, (void*) &buf[0], 4);
-			if (nRead != 4) {
-				if (gzeof(f))
-					break;
-				cerr << "read failed tried 4 (header) got " << nRead << endl;
-				fail("");
-			}
-
-			unsigned char* ptrCopy = ptr; // don't want decode() to advance pointer
-			uint16_t recordSize = decode<uint16_t>(ptrCopy);
-			unsigned int recordSizeWithHeader = recordSize+4;
-			if (startup) {
-				if (recordSize == 0x0200) {
-					cerr << "Big Endian STDF file format is not supported"
-							<< endl;
-					fail("");
-				} else if (recordSize != 0x0002) {
-					cerr << "invalid STDF file" << endl;
-					fail("");
-				}
-				startup = false;
-			}
-			while (nBytesAvailable < recordSizeWithHeader) {
-			nRead = gzread(f, (void*) &buf[4], recordSizeWithHeader);
-			if (nRead != recordSize) {
-				cerr << "read failed tried " << recordSizeWithHeader << " got "
-						<< nRead << endl;
-				fail("");
-			}
-
-			w.stdfRecord(&buf[0]);
-
-		} // while not EOF
-		cout << "finished " << filename << "\n";
-		gzclose(f);
-	} // for filearg
-	w.close();
-#endif
+	writer.close();
 	return 0;
 }
