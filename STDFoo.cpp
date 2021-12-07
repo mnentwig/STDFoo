@@ -762,7 +762,7 @@ void main_reader(string filename, blockingCircBuf &reader) {
 		unsigned char *dest;
 		bool eos = reader.getLargestPossiblePush(/*nBytesMin*/1, &nBytesMax,
 				&dest);
-		if (eos)
+		if (eos) // pro forma. We're not using this direction for signaling. E.g. unrecoverable error on other end
 			break;
 		unsigned int nRead = gzread(f, (void*) dest, nBytesMax);
 		reader.reportPush(nRead);
