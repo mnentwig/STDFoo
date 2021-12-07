@@ -713,6 +713,10 @@ protected:
 	unsigned int dutsReported;
 };
 
+// =======================
+// === pingPongMailbox ===
+// =======================
+//* minimal communication between two threads using one payload message of type T
 template<class T> class pingPongMailbox {
 public:
 	enum state_e {
@@ -725,7 +729,6 @@ public:
 		std::lock_guard<std::mutex> lk(this->m);
 		return this->state;
 	}
-	/** note: state determines payload is valid. Recipient must alter state from "HAVE_WORK" to acknowledge reception */
 	T getPayload() {
 		std::lock_guard<std::mutex> lk(this->m);
 		return this->payload;
@@ -734,6 +737,7 @@ public:
 		std::unique_lock<std::mutex> lk(this->m);
 		this->evt.wait(lk);
 	}
+	//* change of state unlocks other wait()ing thread
 	void setState(state_e state, T payload) {
 		std::lock_guard<std::mutex> lk(this->m);
 		this->state = state;
