@@ -750,7 +750,8 @@ protected:
 	T payload;
 };
 
-void main_reader(string filename, blockingCircBuf &reader) {
+//* feeds one file into reader at a time, .stdf.gz
+void main_readerDotGz(string filename, blockingCircBuf &reader) {
 	// === feed file ===
 	gzFile_s *f = gzopen(filename.c_str(), "rb");
 	if (!f) {
@@ -771,48 +772,89 @@ void main_reader(string filename, blockingCircBuf &reader) {
 	gzclose(f);
 }
 
+//* feeds one file into reader at a time, uncompressed .stdf
+void main_reader(string filename, blockingCircBuf &reader) {
+	// === feed file ===
+	FILE *f = fopen(filename.c_str(), "rb");
+	if (!f) {
+		cerr << "failed to open '" << filename << "' for read";
+		fail("");
+	}
+	while (!feof(f)) {
+		unsigned int nBytesMax;
+		unsigned char *dest;
+		bool eos = reader.getLargestPossiblePush(/*nBytesMin*/1, &nBytesMax,
+				&dest);
+		if (eos) // pro forma. We're not using this direction for signaling. E.g. unrecoverable error on other end
+			break;
+		unsigned int nRead = fread((void*) dest, 1, nBytesMax, f);
+		reader.reportPush(nRead);
+	} // while not EOF
+	cout << "finished " << filename << endl;
+	fclose(f);
+}
+
+//* processes one file out of "reader" at a time into "writer"
 void main_writer(string filename, blockingCircBuf &reader, stdfWriter &writer) {
+	unsigned int nBytesAvailable = 0; // defval is never used
 	bool startup = true;
 	while (true) {
 		unsigned char *ptr;
-		unsigned int nBytesAvailable;
-		bool shutdown = reader.getLargestPossiblePop(2, &nBytesAvailable, &ptr);
-		if (shutdown) {
-			if (nBytesAvailable > 0)
-				cerr << "Warning: " << filename
-						<< " has incorrect format (records not complete)"
-						<< endl;
-			break;
+		// === get at least 2 bytes to know size of following record ===
+		// we also read the REC_TYP, REC_SUB bytes for sanity check at startup
+		bool shutdown = reader.getLargestPossiblePop(4, &nBytesAvailable, &ptr);
+		if (shutdown)
+			goto breakOuterLoop;
+
+		if (startup) {
+			unsigned char *ptrCopy = ptr + 2; // skip 16-bit record length
+			uint16_t SUB_TYP = decode<uint16_t>(ptrCopy);
+
+			if (SUB_TYP == 0x0A00) { // REC_TYP==0 and REC_SUB==10
+				// OK...
+			} else if (SUB_TYP == 0x000A) { // above but swapped => wrong endian-ness
+				fail("Big Endian STDF file format is not supported");
+			} else {
+				fail("invalid STDF file ('first record must be FAR')"); // see  STDF spec v4 "Notes on "Initial Sequence" page 14
+			}
+			startup = false;
 		}
 
 		unsigned char *ptrCopy = ptr; // don't want decode() to advance pointer
 		uint16_t recordSize = decode<uint16_t>(ptrCopy);
 		unsigned int recordSizeWithHeader = recordSize + 4;
-		if (startup) {
-			if (recordSize == 0x0200) {
-				cerr << "Big Endian STDF file format is not supported" << endl;
-				fail("");
-			} else if (recordSize != 0x0002) {
-				cerr << "invalid STDF file" << endl;
-				fail("");
-			}
-			startup = false;
-		}
+
+		// === keep reading until required record length is available ===
 		while (nBytesAvailable < recordSizeWithHeader) {
 			shutdown = reader.getLargestPossiblePop(recordSizeWithHeader,
 					&nBytesAvailable, &ptr);
-			if (shutdown) {
-				if (nBytesAvailable > 0)
-					cerr << "Warning: " << filename
-							<< " has incorrect format (records not complete)"
-							<< endl;
-				break;
-			}
-		}
+			if (shutdown)
+				goto breakOuterLoop;
+		} // while less data than record length
+
+		// === process record in-place ===
 		writer.stdfRecord((unsigned char*) ptr);
+
+		// === release processed length of input data ===
 		reader.pop(recordSizeWithHeader);
 	} // while true (records in file)
+
+	breakOuterLoop: if (nBytesAvailable != 0) {
+		// end-of-file with unconsumed bytes
+		cerr << "Warning: " << filename
+				<< " has incorrect format (partial record)" << endl;
+	}
 	writer.reportFile(filename);
+}
+
+//* determine whether the filename indicates .gz compressed
+bool isDotGz(string fname) {
+	if (fname.length() < 3)
+		return false;
+	string ending = fname.substr(fname.length() - 3, 3);
+	if (ending.compare(".gz"))
+		return false; // differs
+	return true;
 }
 
 // ============
@@ -850,7 +892,10 @@ int main(int argc, char **argv) {
 			mailbox.setState(mailbox.PONG, filename);
 
 			// === feed data ===
-			main_reader(filename, reader);
+			if (isDotGz(filename))
+				main_readerDotGz(filename, reader);
+			else
+				main_reader(filename, reader);
 			reader.setShutdown(true);
 		}
 
