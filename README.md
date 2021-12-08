@@ -1,5 +1,5 @@
 # STDFoo
-a) Converts ATE .stdf.gz to binary float data, one file per TEST_NUM.
+a) Converts ATE .stdf(.gz) to binary float data, one file per TEST_NUM.
 
 b) Imports resulting binary data to Octave _efficiently_ (load-on-demand, designed for xy GB-size datasets or beyond)
 
@@ -8,7 +8,7 @@ b) Imports resulting binary data to Octave _efficiently_ (load-on-demand, design
 * Fast: A dataset 832 Mb zipped, 30000 simulated DUTs with 2k testitems each is converted in around 12 s on a 2013 PC. More data scales linearly (fixed mem)
 * internally multithreaded, gives 40+ % performance boost
 * compatible/future-proof: Compiles with -std=(c++11, c++17, c++20, c++23)
-* Simple and stupid, both building and running 
+* "Simple and stupid", both usage and build process
 * Use of Octave end is optional.
 
 ### Command line arguments: 
@@ -34,7 +34,7 @@ The output directory will be created.
 ### Octave end:
 The quickest 'installation' is to simply copy 'STDFoo.m' into the same directory where 'myOutputDirectory' was created
 * o=STDFoo('myOutputDirectory') opens a handle into 'myOutputDirectory'. Hint: available functions below show with tab completion for 'o.' in the Octave GUI
-* o.DUTs.getDataByTestnum(testnum) per DUT. Returns column vector with RESULT(testnum). Vector gives one column per testnum.
+* o.DUTs.getDataByTestnum(testnum) per DUT. Returns column vector with RESULT(testnum). Vector input returns one column per testnum.
 * o.DUTs.getSite() per DUT. Returns used test site.
 * o.DUTs.getHardbin() per DUT. Returns binning information.
 * o.DUTs.getSoftbin() same
@@ -47,5 +47,5 @@ The quickest 'installation' is to simply copy 'STDFoo.m' into the same directory
 ### Notes: 
 - Scaling modifiers are not applied. The output data is bitwise identical to the original file contents. Expect SI units e.g. Amperes instead of Milliamperes (see "units.txt")
 - NaN is used for missing data (skipped tests)
-- The testcase generator requires freestdf-libstdf.
+- The testcase generator requires freestdf-libstdf. A small testcase is provided on git, structurally identical to the fullsize testcase
 - Endianness conversion is not implemented, if prepared for (reverse byte order in "decode()")
