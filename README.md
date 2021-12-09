@@ -43,6 +43,9 @@ The quickest 'installation' is to simply copy 'STDFoo.m' into the same directory
 * o.tests.getLowLim() per test. Low limits
 * o.tests.getHighLim() per test. High limit
 * o.getNDuts() scalar, the number of tested parts
+* o.files.getFiles() list with processed files
+* o.files.getDutsPerFile() DUT count per file
+* o.files.getMaskByFileindex(fileindex) returns a logical mask to operate on DUT data, hardbin, softbin, site from the given file position.
 
 ### Notes: 
 - Scaling modifiers are not applied. The output data is bitwise identical to the original file contents. Expect SI units e.g. Amperes instead of Milliamperes (see "units.txt")

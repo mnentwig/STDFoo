@@ -2,10 +2,11 @@ function o = STDFoo(folder)
 % handle-based storage
     persistent db = struct();
     
-    % === closure over o and key starts here ===
-    % each call to STDFoo(folder) creates a new context
+    % === closure over "key", "folder" starts here ===
+	% see Matlab "Using Handles to Store Function Parameters"
+	% "When you create a function handle for a nested function, that handle stores not only the name of the function, but also the values of externally scoped variables."
+    % Effectively, each call to STDFoo(folder) creates a new context
     key = sprintf('_%s', folder);
-    o = struct('key', key);
 
     function data = DUTs_getResultByTestnum(testnum)
         assert(nargin == 1, 'need exactly one argument, which may be a vector');
@@ -25,8 +26,7 @@ function o = STDFoo(folder)
             data = db.(key).data.(datakey);
         end
     end
-    
-    
+        
     function r = tests_getTestnums() r = db.(key).testnums; end
     function r = tests_getTestnames() r = db.(key).testnames; end
     function r = tests_getUnits() r = db.(key).units; end
@@ -38,6 +38,12 @@ function o = STDFoo(folder)
     function r = getNDuts() r = numel(db.(key).site); end
     function r = files_getFiles() r = db.(key).files; end
     function r = files_getDutsPerFile() r = db.(key).dutsPerFile; end
+	function r = files_getMaskByFileindex(fileindex) 
+		lastIndexInFile = cumsum(db.(key).dutsPerFile);
+		firstIndexInFile = [1; lastIndexInFile(1:end-1)+1];
+		r = false(getNDuts(), 1);
+		r(firstIndexInFile(fileindex):lastIndexInFile(fileindex)) = true;
+	end
 
     db.(key) = struct(); % clean out existing data
     db.(key).folder = folder;
@@ -53,6 +59,7 @@ function o = STDFoo(folder)
     db.(key).files = readString(folder, 'filenames.txt');
     db.(key).dutsPerFile = readBinary(folder, 'dutsPerFile.uint32', 'uint32');
 
+    o = struct('key', key);
     o.DUTs.getResultByTestnum=@DUTs_getResultByTestnum;
     o.tests.getTestnums=@tests_getTestnums;
     o.tests.getTestnames=@tests_getTestnames;
@@ -65,8 +72,7 @@ function o = STDFoo(folder)
     o.getNDuts=@getNDuts;
     o.files.getFiles=@files_getFiles;
     o.files.getDutsPerFile=@files_getDutsPerFile;
-    
-    % closure over variables specific to 'o' ends here
+	o.files.getMaskByFileindex = @files_getMaskByFileindex;
 end
 function data = readBinary(folder, fname, bintype)
     fname = [folder, '/', fname];
