@@ -1,32 +1,15 @@
 function o = STDFoo(folder)
-% handle-based storage
+	% handle-based storage
     persistent db = struct();
     
-    % === closure over "key", "folder" starts here ===
+    % === closure over "key", "folder", "o" starts here ===
 	% see Matlab "Using Handles to Store Function Parameters"
 	% "When you create a function handle for a nested function, that handle stores not only the name of the function, but also the values of externally scoped variables."
     % Effectively, each call to STDFoo(folder) creates a new context
     key = sprintf('_%s', folder);
-
-    function data = DUTs_getResultByTestnum(testnum)
-        assert(nargin == 1, 'need exactly one argument, which may be a vector');
-        if numel(testnum) > 1
-            % multiple testnums: return one column per testnum. 
-            % preallocate data
-            data = nan(getNDuts(), numel(testnum));
-            for ix = 1 : numel(testnum)
-                data(:, ix) = getDataByTestnum(testnum(ix));
-            end
-        else
-            % single testnum
-            datakey = sprintf('d%i', testnum);
-            if ~isfield(db.(key).data, datakey)
-                db.(key).data.(datakey) = readBinary(folder, sprintf('%i.float', testnum), 'float');
-            end
-            data = db.(key).data.(datakey);
-        end
-    end
+    o = struct('key', key);
         
+	% note: a cleaner way would be the function(db, o, ...) wrapper approach but this is more compact and slightly faster => keep
     function r = tests_getTestnums() r = db.(key).testnums; end
     function r = tests_getTestnames() r = db.(key).testnames; end
     function r = tests_getUnits() r = db.(key).units; end
@@ -35,15 +18,8 @@ function o = STDFoo(folder)
     function r = DUTs_getHardbin() r = db.(key).hardbin; end
     function r = DUTs_getSoftbin() r = db.(key).softbin; end
     function r = DUTs_getSite() r = db.(key).site; end
-    function r = getNDuts() r = numel(db.(key).site); end
     function r = files_getFiles() r = db.(key).files; end
     function r = files_getDutsPerFile() r = db.(key).dutsPerFile; end
-	function r = files_getMaskByFileindex(fileindex) 
-		lastIndexInFile = cumsum(db.(key).dutsPerFile);
-		firstIndexInFile = [1; lastIndexInFile(1:end-1)+1];
-		r = false(getNDuts(), 1);
-		r(firstIndexInFile(fileindex):lastIndexInFile(fileindex)) = true;
-	end
 
     db.(key) = struct(); % clean out existing data
     db.(key).folder = folder;
@@ -59,8 +35,7 @@ function o = STDFoo(folder)
     db.(key).files = readString(folder, 'filenames.txt');
     db.(key).dutsPerFile = readBinary(folder, 'dutsPerFile.uint32', 'uint32');
 
-    o = struct('key', key);
-    o.DUTs.getResultByTestnum=@DUTs_getResultByTestnum;
+    o.DUTs.getResultByTestnum=@(varargin)DUTs_getResultByTestnum(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
     o.tests.getTestnums=@tests_getTestnums;
     o.tests.getTestnames=@tests_getTestnames;
     o.tests.getUnits=@tests_getUnits;
@@ -69,11 +44,49 @@ function o = STDFoo(folder)
     o.DUTs.getHardbin=@DUTs_getHardbin;
     o.DUTs.getSoftbin=@DUTs_getSoftbin;
     o.DUTs.getSite=@DUTs_getSite;
-    o.getNDuts=@getNDuts;
+    o.getNDuts=@(varargin)getNDuts(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
     o.files.getFiles=@files_getFiles;
     o.files.getDutsPerFile=@files_getDutsPerFile;
-	o.files.getMaskByFileindex = @files_getMaskByFileindex;
+	o.files.getMaskByFileindex = @(varargin)files_getMaskByFileindex(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
 end
+
+function r = getNDuts(db, o) %db, o for object
+	assert(nargin == 2+0, 'expecting zero args');
+	key = o.key;
+	r = numel(db.(key).site); 
+end
+
+function r = files_getMaskByFileindex(db, o, fileindex) %db, o for object
+	assert(nargin == 2 + 1, 'need one input argument fileindex');
+	assert(numel(fileindex)==1, 'fileindex must be scalar');
+	key = o.key;
+	lastIndexInFile = cumsum(db.(key).dutsPerFile);
+	firstIndexInFile = [1; lastIndexInFile(1:end-1)+1];
+	r = false(getNDuts(db, o), 1);
+	r(firstIndexInFile(fileindex):lastIndexInFile(fileindex)) = true;
+end
+
+function data = DUTs_getResultByTestnum(db, o, testnum) %db, o for object
+	assert(nargin == 2+1, 'need exactly one argument, which may be a vector');
+	key = o.key;
+	if numel(testnum) > 1
+		% multiple testnums: return one column per testnum. 
+		% preallocate data
+		data = nan(getNDuts(), numel(testnum));
+		for ix = 1 : numel(testnum)
+			data(:, ix) = getDataByTestnum(testnum(ix));
+		end
+	else
+		% single testnum
+		datakey = sprintf('d%i', testnum);
+		if ~isfield(db.(key).data, datakey)
+			folder = db.(key).folder;
+			db.(key).data.(datakey) = readBinary(folder, sprintf('%i.float', testnum), 'float');
+		end
+		data = db.(key).data.(datakey);
+	end
+end
+
 function data = readBinary(folder, fname, bintype)
     fname = [folder, '/', fname];
     h = fopen(fname, 'rb');
