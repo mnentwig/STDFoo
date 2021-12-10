@@ -103,6 +103,6 @@ Note, all the switches but '-lz' are optional:
 - The testcase generator requires freestdf-libstdf. A small testcase is provided on git, structurally identical to the fullsize testcase
 - Endianness conversion is not implemented, if prepared for (reverse byte order in "decode()")
 - Merging multiple files is one of the main use cases (e.g. working with multiple lots, data from different testers, ...). 
-Testitems should be "reasonably" consistent between files, because any DUT writes a NaN-result for any unknown testitem. 
+Testitems should be "reasonably" consistent between files, because any DUT writes a NaN-result for any missing testitem. 
 If two sources of data are largely non-overlapping in testitem numbering, consider processing them individually into separate output folders.
 - Fast "row-wise" data extraction (all data for given DUTs) could be applied on the results using `fseek()` as the record size of the output binary data is fixed.
