@@ -77,6 +77,7 @@ yield_perc = 100*sum(sbin==1)/numel(sbin)   % calculates yield (assuming soft bi
 ```
 
 ### Compilation
+Note: the build process is OS independent. Unix/Linux would conventionally rename `STDFoo.exe` to `STDFoo` and copy e.g. to `/usr/local/bin`.
 ```
 make STDFoo.exe
 ```
