@@ -94,7 +94,7 @@ g++ -static -o STDFoo.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
 ```
 Note, all the switches but '-lz' are optional:
 * -static Executable should not rely on DLLs / .so libraries (preference)
-* -std c++17 is probably the default already, and a higher standard does no harm. Now if the compiler doesn't support c++17, this gives at least a meaningful error.
+* -std c++17 is probably the default already, and a higher standard does no harm. Now if the compiler does _not_ support c++17, this gives at least a meaningful error.
 * -O3 optimize (if benchmarking, try -O2 or -Os. But the bottleneck is largely libz for .stdf.gz)
 * -DNDEBUG: Assertions off for higher speed
 * -Wall: Complain much (there should still be zero warnings)
