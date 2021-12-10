@@ -77,13 +77,13 @@ yield_perc = 100*sum(sbin==1)/numel(sbin)   % calculates yield (assuming soft bi
 ```
 
 ### Compilation
-'''
+```
 make STDFoo.exe
-''' 
+```
 or run manually e.g.
-'''
+```
 g++ -static -o STDFoo.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
-''' 
+```
 Note, all the switches but '-lz' are optional:
 * -static Executable should not rely on DLLs / .so libraries (preference)
 * -std c++17 is probably the default already, and a higher standard does no harm. Now if the compiler doesn't support c++17, this gives at least a meaningful error.
