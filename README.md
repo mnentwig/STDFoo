@@ -73,7 +73,7 @@ figure(); plot(dutNum, data, 'xk'); hold on;% plot time series of all DUTs as bl
 sbin = o.DUTs.getSoftbin();                 % get softbin result
 mask = sbin == 1234;                        % set up a logical mask that isolates softbin 1234
 plot(dutNum(mask), data(mask), 'xk');       % re-plot DUTs that went into softbin 1234 with a red '+'
-yield_perc = 100*sum(sbin==1)/numel(sbin)	% calculates yield (assuming soft bin 1 means 'pass')
+yield_perc = 100*sum(sbin==1)/numel(sbin)   % calculates yield (assuming soft bin 1 means 'pass')
 ```
 
 ### Compilation
