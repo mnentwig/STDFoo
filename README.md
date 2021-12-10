@@ -14,7 +14,7 @@ Output data is organized "column-major" (column=testitem/binning for all DUTs) s
 * Scalable: processing time scales linearly with file size, constant small memory footprint
 * compatible/future-proof: Compiles with -std=(c++11, c++17, c++20, c++23)
 * "Simple and stupid, robust and reliable" mindset for usage and build process 
-_Time will tell whether this was accomplished_
+_Time will tell whether this has been accomplished_
 * Use of Octave end is optional.
 
 ### Command line arguments: 
