@@ -9,8 +9,8 @@ Output data is organized "column-major" (column=testitem/binning for all DUTs) s
 
 * used STDF fields are *PIR* (insertion), *PTR* (individual test data), *PRR* (results/binning). All other records are skipped
 * pure C++, needs only a recent compiler e.g. from MinGW
-* No library dependencies! _Note, the default version uses 25yo standard `libz` but it can be omitted._
-* Fast: Essentially as fast as uncompressing the input file (uncompressing is the bottleneck, other work is multithreaded).
+* **No library dependencies** _Note, the default version uses 25yo standard `libz` but it can be built without._
+* Fast: Essentially **as fast as uncompressing the input .stdf.gz file** (decompression is the bottleneck, all other work is multithreaded and waits).
 * Quick: Startup overhead is minimal (native executable), equally well suited for a large number of small jobs or a few big ones. 
 * Scalable: processing time scales linearly with file size, constant small memory footprint
 * compatible/future-proof: Compiles with -std=(c++11, c++17, c++20, c++23)
