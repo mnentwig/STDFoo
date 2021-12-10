@@ -48,7 +48,7 @@ function o = STDFoo(folder)
     o.getnDUTs=@(varargin)getnDUTs(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
     o.files.getFiles=@files_getFiles;
     o.files.getDutsPerFile=@files_getDutsPerFile;
-	o.files.getMaskByFileindex = @(varargin)files_getMaskByFileindex(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
+  	o.files.getMaskByFileindex = @(varargin)files_getMaskByFileindex(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
 end
 
 function r = getnDUTs(db, o) %db, o for object
@@ -128,7 +128,7 @@ function celldata = readString(folder, fname)
         if (line == -1) 
             break; 
         end
-        celldata{end+1} = line;  
+        celldata{end+1, 1} = line;  
     end
     fclose(h);
 end
