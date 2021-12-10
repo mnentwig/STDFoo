@@ -90,5 +90,5 @@ Note, all the switches but '-lz' are optional:
 * -std c++17 is probably the default already, and a higher standard does no harm. Now if the compiler doesn't support c++17, this gives at least a meaningful error.
 * -O3 optimize (if benchmarking, try -O2 or -Os. But the bottleneck is largely libz for .stdf.gz)
 * -DNDEBUG: Assertions off for higher speed
-* -Wall: Now warnings (there should be none)
+* -Wall: Complain much (there should still be zero warnings)
 * -lz: Link with zlib for uncompressing .gz format
