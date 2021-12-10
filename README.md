@@ -18,8 +18,9 @@ _Time will tell whether this has been accomplished_
 * Use of Octave end is optional.
 
 ### Command line arguments: 
-STDfoo.exe myOutDirectory myInputfile1.stdf.gz myInputfile2.stdf.gz myInputfile3.stdf.gz ...
-	
+```
+STDfoo.exe myOutDirectory myInputfile1.stdf.gz myInputfile2.stdf.gz myInputfile3.stdf.gz ... 
+```	
 The output directory will be created.
 
 ### Results in myOutputDirectory:
