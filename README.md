@@ -39,19 +39,28 @@ The output directory will be created.
 
 ### Octave end:
 The quickest 'installation' is to simply copy 'STDFoo.m' into the same directory where 'myOutputDirectory' was created
-* `o=STDFoo('myOutputDirectory')` opens a handle into 'myOutputDirectory'. Hint: available functions below show with tab completion for `o.` in the Octave GUI
-* `o.DUTs.getDataByTestnum(testnum)` per DUT. Returns column vector with RESULT(testnum). Vector input returns one column per testnum.
-* `o.DUTs.getSite()` per DUT. Returns used test site.
-* `o.DUTs.getHardbin()` per DUT. Returns binning information.
-* `o.DUTs.getSoftbin()` same
-* `o.tests.getTestnums()` per test. Testnumber (sorted)
-* `o.tests.getUnits()` per test. Cellarray of all units (per test order matches getTestnums(
-* `o.tests.getLowLim()` per test. Low limits
-* `o.tests.getHighLim()` per test. High limit
-* `o.getNDuts()` scalar, the number of tested parts
-* `o.files.getFiles()` list with processed files
+* `o=STDFoo('myOutputDirectory')` opens a handle into 'myOutputDirectory'. 
+
+Available functions show on the command line with tab completion for `o.`.
+
+* `o.DUTs. ...`: Methods return per-DUT data, in the order of PRR records in the STDF file. Note, calling function fields requires round brackets.
+* `o.DUTs.getDataByTestnum(testnum)`: Column vector with RESULT(testnum). Giving a vector for `testnum` returns one column per testnum.
+* `o.DUTs.getSite()` Returns used test site.
+* `o.DUTs.getHardbin()` Returns final hardbin
+* `o.DUTs.getSoftbin()` Returns final softbin
+
+* `o.tests. ...`: Methods return per-test data, sorted by ascending test numbers
+* `o.tests.getTestnums()` Testnumber
+* `o.tests.getUnits()` Cellarray of all units, matching order in above testnumber. Note: STDF strips scaling factors. E.g. Nano-, Micro-, Milliamperes will all report as "A" with results in Amperes.
+* `o.tests.getLowLim()` Low limit of each test (taken from first PTR record where it appeared). Above comment on unscaled / SI units applies.
+* `o.tests.getHighLim()` High limit of each test.  Above comment on unscaled / SI units applies.
+
+* `o.files. ...`: Methods return per-file data, in the order of command line arguments given to `STDFoo.exe`.
+* `o.files.getFiles()` gets filenames
 * `o.files.getDutsPerFile()` DUT count per file
-* `o.files.getMaskByFileindex(fileindex)` returns a logical mask to operate on DUT data, hardbin, softbin, site from the given file position.
+* `o.files.getMaskByFileindex(fileindex)` returns a logical mask to operate on `o.DUTS. ...` data for the given file only.
+
+* `o.getNDuts()` Total count of tested parts (equals lenght of any `o.DUTs. ...` result)
 
 ### Octave examples
 ```
