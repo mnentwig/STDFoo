@@ -41,6 +41,7 @@ The output directory will be created.
 
 ### Octave end:
 _Matlab will probably work the same but hasn't been tested._
+
 The quickest 'installation' is to simply copy 'STDFoo.m' into the same directory where 'myOutputDirectory' was created. Then run Octave from there.
 * `o=STDFoo('myOutputDirectory')` opens a handle into 'myOutputDirectory'. 
 
