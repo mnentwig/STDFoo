@@ -1,15 +1,15 @@
 function o = STDFoo(folder)
-	% handle-based storage
+	  % handle-based storage
     persistent db = struct();
     
-    % === closure over "key", "folder", "o" starts here ===
-	% see Matlab "Using Handles to Store Function Parameters"
-	% "When you create a function handle for a nested function, that handle stores not only the name of the function, but also the values of externally scoped variables."
+    % === closure (effectively) over "key", "folder", "o" starts here ===
+	  % see Matlab "Using Handles to Store Function Parameters"
+	  % "When you create a function handle for a nested function, that handle stores not only the name of the function, but also the values of externally scoped variables."
     % Effectively, each call to STDFoo(folder) creates a new context
     key = sprintf('_%s', folder);
     o = struct('key', key);
         
-	% note: a cleaner way would be the function(db, o, ...) wrapper approach but this is more compact and slightly faster => keep
+	  % note: a cleaner way would be the function(db, o, ...) wrapper approach but this is more compact and slightly faster => keep
     function r = tests_getTestnums() r = db.(key).testnums; end
     function r = tests_getTestnames() r = db.(key).testnames; end
     function r = tests_getUnits() r = db.(key).units; end

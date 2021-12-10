@@ -78,6 +78,8 @@ plot(dutNum(mask), data(mask), 'xk');       % re-plot DUTs that went into softbi
 yield_perc = 100*sum(sbin==1)/numel(sbin)   % calculates yield (assuming soft bin 1 means 'pass')
 ```
 
+There is a selftest for all Octave features in `selftestExample.m`;
+
 ### Compilation
 Note: the build process is OS independent. Unix/Linux users would conventionally rename `STDFoo.exe` to `STDFoo` and copy e.g. to `/usr/local/bin`.
 ```
