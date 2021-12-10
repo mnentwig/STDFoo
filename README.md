@@ -59,3 +59,35 @@ The quickest 'installation' is to simply copy 'STDFoo.m' into the same directory
 - Merging multiple files is one of the main use cases (e.g. working with multiple lots, data from different testers, ...). 
 Testitems should be "reasonably" consistent between files, because any DUT writes a NaN-result for any unknown testitem. 
 If two sources of data are largely non-overlapping in testitem numbering, consider processing them individually into separate output folders.
+- This page refers to 'STDFoo.exe' for simplicity. On Unix/Linux, this would be only "STDFoo".
+
+### Octave examples
+```
+o=STDFoo('myOutDirectory');
+```
+Opens a 'handle' o to the output directory of STDFoo.exe. Hint, use tab completion on `o.` to get a list of sections (DUTs, files, ...) and possible commands
+```
+data = o.DUTs.getResultByTestnum(2345); 	% retrieve DUT data for test number 2345
+dutNum = 1 : numel(data);					% x vector for plot
+figure(); plot(dutNum, data, 'xk'); hold on;% plot time series of all DUTs as black 'x' (missing entries => NaN => omitted)
+sbin = o.DUTs.getSoftbin();					% get softbin result
+mask = sbin == 1234;						% set up a logical mask that isolates softbin 1234
+plot(dutNum(mask), data(mask), 'xk');		% re-plot DUTs that went into softbin 1234 with a red '+'
+```
+
+### Compilation
+'''
+make STDFoo.exe
+''' 
+or run manually e.g.
+'''
+g++ -static -o STDFoo.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+''' 
+Note, all the switches but '-lz' are optional:
+* -static Executable should not rely on DLLs / .so libraries (preference)
+* -std c++17 is probably the default already, and a higher standard does no harm. Now if the compiler doesn't support c++17, this gives at least a meaningful error.
+* -O3 optimize (if benchmarking, try -O2 or -Os. But the bottleneck is largely libz for .stdf.gz)
+* -DNDEBUG: Assertions off for higher speed
+* -Wall: Now warnings (there should be none)
+* -lz: Link with zlib for uncompressing .gz format
+ 
