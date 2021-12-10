@@ -1,12 +1,16 @@
 # STDFoo
 a) Converts ATE .stdf(.gz) to binary float data, one file per TEST_NUM.
 
-b) Imports resulting binary data to Octave _efficiently_ (load-on-demand, designed for xy GB-size datasets or beyond)
+b) Imports resulting binary data to Octave _efficiently_.
+
+Intended for very large datasets from multiple files. 
+
+Output data is organized "column-major" (column=testitem/binning) so that any item of interest can be retrieved with near-optimal speed (=loading one binary file).
 
 * used STDF fields are *PIR* (insertion), *PTR* (individual test data), *PRR* (results/binning). All other records are skipped
 * pure C++, needs only a recent compiler e.g. from MinGW, no libraries required except libz. 
-* Fast: A dataset 832 Mb zipped, 30000 simulated DUTs with 2k testitems each is converted in around 12 s on a 2013 PC. More data scales linearly (fixed mem)
-* internally multithreaded, gives 40+ % performance boost
+* Fast: Essentially as fast as uncompressing the input file (multi threaded). 
+* Scalable: processing time scales linearly with file size, constant memory
 * compatible/future-proof: Compiles with -std=(c++11, c++17, c++20, c++23)
 * "Simple and stupid", both usage and build process
 * Use of Octave end is optional.
@@ -52,3 +56,6 @@ The quickest 'installation' is to simply copy 'STDFoo.m' into the same directory
 - NaN is used for missing data (skipped tests)
 - The testcase generator requires freestdf-libstdf. A small testcase is provided on git, structurally identical to the fullsize testcase
 - Endianness conversion is not implemented, if prepared for (reverse byte order in "decode()")
+- Merging multiple files is one of the main use cases (e.g. working with multiple lots, data from different testers, ...). 
+Testitems should be "reasonably" consistent between files, because any DUT writes a NaN-result for any unknown testitem. 
+If two sources of data are largely non-overlapping in testitem numbering, consider processing them individually into separate output folders.
