@@ -37,19 +37,19 @@ The output directory will be created.
 
 ### Octave end:
 The quickest 'installation' is to simply copy 'STDFoo.m' into the same directory where 'myOutputDirectory' was created
-* o=STDFoo('myOutputDirectory') opens a handle into 'myOutputDirectory'. Hint: available functions below show with tab completion for 'o.' in the Octave GUI
-* o.DUTs.getDataByTestnum(testnum) per DUT. Returns column vector with RESULT(testnum). Vector input returns one column per testnum.
-* o.DUTs.getSite() per DUT. Returns used test site.
-* o.DUTs.getHardbin() per DUT. Returns binning information.
-* o.DUTs.getSoftbin() same
-* o.tests.getTestnums() per test. Testnumber (sorted)
-* o.tests.getUnits() per test. Cellarray of all units (per test order matches getTestnums(
-* o.tests.getLowLim() per test. Low limits
-* o.tests.getHighLim() per test. High limit
-* o.getNDuts() scalar, the number of tested parts
-* o.files.getFiles() list with processed files
-* o.files.getDutsPerFile() DUT count per file
-* o.files.getMaskByFileindex(fileindex) returns a logical mask to operate on DUT data, hardbin, softbin, site from the given file position.
+* `o=STDFoo('myOutputDirectory')` opens a handle into 'myOutputDirectory'. Hint: available functions below show with tab completion for 'o.' in the Octave GUI
+* `o.DUTs.getDataByTestnum(testnum)` per DUT. Returns column vector with RESULT(testnum). Vector input returns one column per testnum.
+* `o.DUTs.getSite()` per DUT. Returns used test site.
+* `o.DUTs.getHardbin()` per DUT. Returns binning information.
+* `o.DUTs.getSoftbin()` same
+* `o.tests.getTestnums()` per test. Testnumber (sorted)
+* `o.tests.getUnits()` per test. Cellarray of all units (per test order matches getTestnums(
+* `o.tests.getLowLim()` per test. Low limits
+* `o.tests.getHighLim()` per test. High limit
+* `o.getNDuts()` scalar, the number of tested parts
+* `o.files.getFiles()` list with processed files
+* `o.files.getDutsPerFile()` DUT count per file
+* `o.files.getMaskByFileindex(fileindex)` returns a logical mask to operate on DUT data, hardbin, softbin, site from the given file position.
 
 ### Notes: 
 - Scaling modifiers are not applied. The output data is bitwise identical to the original file contents. Expect SI units e.g. Amperes instead of Milliamperes (see "units.txt")
@@ -67,12 +67,13 @@ o=STDFoo('myOutDirectory');
 ```
 Opens a 'handle' o to the output directory of STDFoo.exe. Hint, use tab completion on `o.` to get a list of sections (DUTs, files, ...) and possible commands
 ```
-data = o.DUTs.getResultByTestnum(2345); 	% retrieve DUT data for test number 2345
-dutNum = 1 : numel(data);					% x vector for plot
+data = o.DUTs.getResultByTestnum(2345);     % retrieve DUT data for test number 2345
+dutNum = 1 : numel(data);                   % x vector for plot
 figure(); plot(dutNum, data, 'xk'); hold on;% plot time series of all DUTs as black 'x' (missing entries => NaN => omitted)
-sbin = o.DUTs.getSoftbin();					% get softbin result
-mask = sbin == 1234;						% set up a logical mask that isolates softbin 1234
-plot(dutNum(mask), data(mask), 'xk');		% re-plot DUTs that went into softbin 1234 with a red '+'
+sbin = o.DUTs.getSoftbin();                 % get softbin result
+mask = sbin == 1234;                        % set up a logical mask that isolates softbin 1234
+plot(dutNum(mask), data(mask), 'xk');       % re-plot DUTs that went into softbin 1234 with a red '+'
+yield_perc = 100*sum(sbin==1)/numel(sbin)	% calculates yield (assuming soft bin 1 means 'pass')
 ```
 
 ### Compilation
@@ -90,4 +91,3 @@ Note, all the switches but '-lz' are optional:
 * -DNDEBUG: Assertions off for higher speed
 * -Wall: Now warnings (there should be none)
 * -lz: Link with zlib for uncompressing .gz format
- 
