@@ -115,7 +115,7 @@ function data = DUTs_uncacheResultByTestnum(db, o, testnum) %db, o for object
 		% single testnum
 		datakey = sprintf('d%i', testnum);
 		if isfield(db.(key).data, datakey)
-			rmfield(db.(key).data, datakey);
+			db.(key).data = rmfield(db.(key).data, datakey);
 		end
 	end
 end
