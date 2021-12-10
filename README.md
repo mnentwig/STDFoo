@@ -5,12 +5,13 @@ b) Imports resulting binary data to Octave _efficiently_.
 
 Intended for very large datasets from multiple files. 
 
-Output data is organized "column-major" (column=testitem/binning) so that any item of interest can be retrieved with near-optimal speed (=loading one binary file).
+Output data is organized "column-major" (column=testitem/binning for all DUTs) so that any item of interest can be retrieved with near-optimal speed (=loading a binary file that contains only the test item for all DUTs).
 
 * used STDF fields are *PIR* (insertion), *PTR* (individual test data), *PRR* (results/binning). All other records are skipped
 * pure C++, needs only a recent compiler e.g. from MinGW, no libraries required except libz. 
-* Fast: Essentially as fast as uncompressing the input file (multi threaded). 
-* Scalable: processing time scales linearly with file size, constant memory
+* Fast: Essentially as fast as uncompressing the input file (uncompressing is the bottleneck, other work is multithreaded).
+* Quick: Startup overhead is minimal (native executable), equally well suited for a large number of small jobs or a few big ones. 
+* Scalable: processing time scales linearly with file size, constant small memory footprint
 * compatible/future-proof: Compiles with -std=(c++11, c++17, c++20, c++23)
 * "Simple and stupid", both usage and build process
 * Use of Octave end is optional.
@@ -51,16 +52,6 @@ The quickest 'installation' is to simply copy 'STDFoo.m' into the same directory
 * `o.files.getDutsPerFile()` DUT count per file
 * `o.files.getMaskByFileindex(fileindex)` returns a logical mask to operate on DUT data, hardbin, softbin, site from the given file position.
 
-### Notes: 
-- Scaling modifiers are not applied. The output data is bitwise identical to the original file contents. Expect SI units e.g. Amperes instead of Milliamperes (see "units.txt")
-- NaN is used for missing data (skipped tests)
-- The testcase generator requires freestdf-libstdf. A small testcase is provided on git, structurally identical to the fullsize testcase
-- Endianness conversion is not implemented, if prepared for (reverse byte order in "decode()")
-- Merging multiple files is one of the main use cases (e.g. working with multiple lots, data from different testers, ...). 
-Testitems should be "reasonably" consistent between files, because any DUT writes a NaN-result for any unknown testitem. 
-If two sources of data are largely non-overlapping in testitem numbering, consider processing them individually into separate output folders.
-- This page refers to 'STDFoo.exe' for simplicity. On Unix/Linux, this would be only "STDFoo".
-
 ### Octave examples
 ```
 o=STDFoo('myOutDirectory');
@@ -77,7 +68,7 @@ yield_perc = 100*sum(sbin==1)/numel(sbin)   % calculates yield (assuming soft bi
 ```
 
 ### Compilation
-Note: the build process is OS independent. Unix/Linux would conventionally rename `STDFoo.exe` to `STDFoo` and copy e.g. to `/usr/local/bin`.
+Note: the build process is OS independent. Unix/Linux users would conventionally rename `STDFoo.exe` to `STDFoo` and copy e.g. to `/usr/local/bin`.
 ```
 make STDFoo.exe
 ```
@@ -92,3 +83,13 @@ Note, all the switches but '-lz' are optional:
 * -DNDEBUG: Assertions off for higher speed
 * -Wall: Complain much (there should still be zero warnings)
 * -lz: Link with zlib for uncompressing .gz format
+
+### Notes: 
+- Scaling modifiers are not applied. The output data is bitwise identical to the original file contents. Expect SI units e.g. Amperes instead of Milliamperes (see "units.txt")
+- NaN is used for missing data (skipped tests)
+- The testcase generator requires freestdf-libstdf. A small testcase is provided on git, structurally identical to the fullsize testcase
+- Endianness conversion is not implemented, if prepared for (reverse byte order in "decode()")
+- Merging multiple files is one of the main use cases (e.g. working with multiple lots, data from different testers, ...). 
+Testitems should be "reasonably" consistent between files, because any DUT writes a NaN-result for any unknown testitem. 
+If two sources of data are largely non-overlapping in testitem numbering, consider processing them individually into separate output folders.
+- Fast "row-wise" data extraction (all data for given DUTs) could be applied on the results using `fseek()` as the record size of the output binary data is fixed.
