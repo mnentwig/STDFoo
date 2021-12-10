@@ -99,7 +99,7 @@ Note, all the switches but '-lz' are optional:
 * -O3 optimize (if benchmarking, try -O2 or -Os. But the bottleneck is largely libz for .stdf.gz)
 * -DNDEBUG: Assertions off for higher speed
 * -Wall: Complain much (there should still be zero warnings)
-* -lz: Link with zlib for uncompressing .gz format. Alternatively, compile with -DNO_LIBZ.
+* -lz: Link with zlib for uncompressing .gz format.
 
 If no `libz` is available, use -DNO_LIBZ. In this case, only uncompressed .stdf format can be processed. See `make STDFoo_noZ.exe`.
 
