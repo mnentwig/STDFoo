@@ -39,7 +39,7 @@ The output directory will be created.
 
 ### Octave end:
 The quickest 'installation' is to simply copy 'STDFoo.m' into the same directory where 'myOutputDirectory' was created
-* `o=STDFoo('myOutputDirectory')` opens a handle into 'myOutputDirectory'. Hint: available functions below show with tab completion for 'o.' in the Octave GUI
+* `o=STDFoo('myOutputDirectory')` opens a handle into 'myOutputDirectory'. Hint: available functions below show with tab completion for `o.` in the Octave GUI
 * `o.DUTs.getDataByTestnum(testnum)` per DUT. Returns column vector with RESULT(testnum). Vector input returns one column per testnum.
 * `o.DUTs.getSite()` per DUT. Returns used test site.
 * `o.DUTs.getHardbin()` per DUT. Returns binning information.
