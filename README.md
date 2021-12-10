@@ -8,7 +8,8 @@ Intended for very large datasets from multiple files.
 Output data is organized "column-major" (column=testitem/binning for all DUTs) so that any item of interest can be retrieved with near-optimal speed (=loading a binary file that contains only the test item for all DUTs).
 
 * used STDF fields are *PIR* (insertion), *PTR* (individual test data), *PRR* (results/binning). All other records are skipped
-* pure C++, needs only a recent compiler e.g. from MinGW, no libraries required except libz. 
+* pure C++, needs only a recent compiler e.g. from MinGW
+* requires no other libraries etc. except libz 
 * Fast: Essentially as fast as uncompressing the input file (uncompressing is the bottleneck, other work is multithreaded).
 * Quick: Startup overhead is minimal (native executable), equally well suited for a large number of small jobs or a few big ones. 
 * Scalable: processing time scales linearly with file size, constant small memory footprint
