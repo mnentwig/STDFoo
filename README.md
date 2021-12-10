@@ -13,7 +13,7 @@ Output data is organized "column-major" (column=testitem/binning for all DUTs) s
 * Quick: Startup overhead is minimal (native executable), equally well suited for a large number of small jobs or a few big ones. 
 * Scalable: processing time scales linearly with file size, constant small memory footprint
 * compatible/future-proof: Compiles with -std=(c++11, c++17, c++20, c++23)
-* "Simple and stupid", both usage and build process
+* "Simple and stupid, robust and reliable" mindset for usage and build process _Time will tell whether this was accomplished_
 * Use of Octave end is optional.
 
 ### Command line arguments: 
