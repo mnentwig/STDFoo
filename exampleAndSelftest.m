@@ -54,5 +54,10 @@ function exampleAndSelftest()
   
   assert(sum(maskFile1 | maskFile2) == n); % both masks must cover every dut
   assert(sum(maskFile1 & maskFile2) == 0);  % both masks may have no duts in common
+  
+  fileindex = o.files.getFileindex();
+  assert(sum(fileindex == 1) == sum(maskFile1));
+  assert(sum(fileindex == 2) == sum(maskFile2));
+  
   disp('all tests passed');
  end

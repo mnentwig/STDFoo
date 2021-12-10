@@ -49,6 +49,7 @@ function o = STDFoo(folder)
     o.files.getFiles=@files_getFiles;
     o.files.getDutsPerFile=@files_getDutsPerFile;
   	o.files.getMaskByFileindex = @(varargin)files_getMaskByFileindex(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
+  	o.files.getFileindex = @(varargin)files_getFileindex(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
 end
 
 function r = getnDUTs(db, o) %db, o for object
@@ -57,6 +58,7 @@ function r = getnDUTs(db, o) %db, o for object
 	r = numel(db.(key).site); 
 end
 
+% note: mask needs 1 bit / DUT
 function r = files_getMaskByFileindex(db, o, fileindex) %db, o for object
 	assert(nargin == 2 + 1, 'need one input argument fileindex');
 	assert(numel(fileindex)==1, 'fileindex must be scalar');
@@ -65,6 +67,18 @@ function r = files_getMaskByFileindex(db, o, fileindex) %db, o for object
 	firstIndexInFile = [1; lastIndexInFile(1:end-1)+1];
 	r = false(getnDUTs(db, o), 1);
 	r(firstIndexInFile(fileindex):lastIndexInFile(fileindex)) = true;
+end
+
+% note: index needs 64 bit / DUT (double)
+function r = files_getFileindex(db, o, fileindex) %db, o for object
+	assert(nargin == 2, 'expecting zero args');
+	key = o.key;
+	lastIndexInFile = cumsum(db.(key).dutsPerFile);
+	firstIndexInFile = [1; lastIndexInFile(1:end-1)+1];
+	r = zeros(getnDUTs(db, o), 1);
+  for fileindex  = 1 : numel(lastIndexInFile)
+    r(firstIndexInFile(fileindex):lastIndexInFile(fileindex)) = fileindex;
+  end
 end
 
 function data = DUTs_getResultByTestnum(db, o, testnum) %db, o for object
