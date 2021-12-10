@@ -9,7 +9,7 @@ Output data is organized "column-major" (column=testitem/binning for all DUTs) s
 
 * used STDF fields are *PIR* (insertion), *PTR* (individual test data), *PRR* (results/binning). All other records are skipped
 * pure C++, needs only a recent compiler e.g. from MinGW
-* requires no other libraries etc. except libz 
+* No library dependencies! _Note, the default version uses 25yo standard `libz` but it can be omitted._
 * Fast: Essentially as fast as uncompressing the input file (uncompressing is the bottleneck, other work is multithreaded).
 * Quick: Startup overhead is minimal (native executable), equally well suited for a large number of small jobs or a few big ones. 
 * Scalable: processing time scales linearly with file size, constant small memory footprint
@@ -97,6 +97,8 @@ Note, all the switches but '-lz' are optional:
 * -DNDEBUG: Assertions off for higher speed
 * -Wall: Complain much (there should still be zero warnings)
 * -lz: Link with zlib for uncompressing .gz format
+
+If no `libz` is available, use -DNO_LIBZ. In this case, only uncompressed .stdf format can be processed. See `make STDFoo_noZ.exe`.
 
 ### Notes: 
 - Scaling modifiers are not applied. The output data is bitwise identical to the original file contents. Expect SI units e.g. Amperes instead of Milliamperes (see "units.txt")

@@ -5,8 +5,9 @@ STDFoo.exe: STDFoo.cpp
 	g++ -static -o STDFoo.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
 	strip STDFoo.exe
 
-STDFooRefimpl.exe: STDFoo.cpp
-	g++ -static -DREFIMPL -o STDFooRefimpl.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+STDFoo_noZ.exe: STDFoo.cpp
+	g++ -static -o STDFoo_noZ.exe -std=c++17 -O3 -DNODEBUG -DNO_LIBZ -Wall STDFoo.cpp -lz
+	strip STDFoo_noZ.exe
 
 testcase.stdf.gz:
 	@echo "needs built freestdf-libstdf directory one level up. Note freeStdf_patches.png for necessary modifications"

@@ -12,7 +12,9 @@
 #include <mutex>
 #include <condition_variable>
 #include <cmath>
+#ifndef NO_LIBZ
 #include <zlib.h>
+#endif
 #include <string>
 #include <cassert>
 #include <stdint.h>
@@ -750,6 +752,7 @@ protected:
 	T payload;
 };
 
+#ifndef NO_LIBZ
 //* feeds one file into reader at a time, .stdf.gz
 void main_readerDotGz(string filename, blockingCircBuf &reader) {
 	// === feed file ===
@@ -771,7 +774,7 @@ void main_readerDotGz(string filename, blockingCircBuf &reader) {
 	cout << "finished " << filename << endl;
 	gzclose(f);
 }
-
+#endif
 //* feeds one file into reader at a time, uncompressed .stdf
 void main_reader(string filename, blockingCircBuf &reader) {
 	// === feed file ===
@@ -892,9 +895,11 @@ int main(int argc, char **argv) {
 			mailbox.setState(mailbox.PONG, filename);
 
 			// === feed data ===
+#ifndef NO_LIBZ
 			if (isDotGz(filename))
 				main_readerDotGz(filename, reader);
 			else
+#endif
 				main_reader(filename, reader);
 			reader.setShutdown(true);
 		}
