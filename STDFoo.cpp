@@ -942,18 +942,20 @@ int main(int argc, char **argv) {
 		if (isDotGz(filename))
 			main_readerDotGz(filename, reader);
 		else
-#endif
+			main_reader(filename, reader);
+#else
 		main_reader(filename, reader);
-	reader.setShutdown(true);
-}
+#endif
+		reader.setShutdown(true);
+	}
 
-while (mailbox.getState() != mailbox.PING) {
-	mailbox.wait();
-}
+	while (mailbox.getState() != mailbox.PING) {
+		mailbox.wait();
+	}
 
 // === notify downstream processing there is no more data ===
-mailbox.setState(mailbox.PONG, /*agreed protocol: empty string => done*/
-"");
+	mailbox.setState(mailbox.PONG, /*agreed protocol: empty string => done*/
+	"");
 }	);
 
 	stdfWriter writer(dirname);
