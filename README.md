@@ -24,6 +24,8 @@ STDfoo.exe myOutDirectory myInputfile1.stdf.gz myInputfile2.stdf.gz myInputfile3
 ```	
 The output directory will be created.
 
+A file with extension .txt containing a list of .stdf(.gz) files may be given at any position in the input arguments list. Results will be identical to replacing the .txt file on the command line by its contents.
+
 ### Results in myOutputDirectory:
 * testnums.uint32: all encountered TEST_NUM fields in ascending order
 * testnames.txt: newline-separated TEST_DESC strings, one per TEST_NUM

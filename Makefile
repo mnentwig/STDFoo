@@ -27,24 +27,22 @@ testcaseSmall.stdf.gz:
 	@echo "Zipping STDF file. This may take a while"
 	gzip testcaseSmall.stdf
 
-tests: STDFoo.exe STDFooRefimpl.exe testcase.stdf.gz
-	@echo "running release version into out1"
-	./STDFoo.exe out1 testcase.stdf.gz
-	@echo "running reference implementation into out2"
-	./STDFooRefimpl.exe out2 testcase.stdf.gz
-	@echo "both out1, out2 folders should be bitwise identical"
-	diff -r out1 out2
+tests: STDFoo.exe testcase.stdf.gz
+	@echo "testcaseSmall.stdf" > testjobs.txt
+	@echo "testcaseSmall.stdf" >> testjobs.txt
+	./STDFoo.exe out1 testcase.stdf.gz testjobs.txt
+	@echo 'please also run exampleAndSelftest from octave'
 
 compat:
-# gcc 11-2 should successfully build with all those standards:
-# c++11 requires the POSIX "mkdir" variant
-	g++ -DPRE_CPP17 -static -o STDFoo.exe -std=c++11 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
-	g++              -static -o STDFoo.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
-	g++              -static -o STDFoo.exe -std=c++20 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
-	g++              -static -o STDFoo.exe -std=c++23 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+# gcc 11-2 should successfully build with all those standards (default standard: c++17)
+# c++11 uses the POSIX "mkdir" variant internally
+	g++ -static -o STDFoo.exe -std=c++11 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+	g++ -static -o STDFoo.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+	g++ -static -o STDFoo.exe -std=c++20 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+	g++ -static -o STDFoo.exe -std=c++23 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
 
 clean:
-	rm -Rf STDFoo.exe createTestcase.exe out1 out2 testcase.stdf STDFooRefimpl.exe
+	rm -Rf STDFoo.exe createTestcase.exe out1 out2 testcase.stdf STDFooRefimpl.exe testjobs.txt
 
 # testcase causes too much hassle to rebuild casually
 veryclean: clean

@@ -39,6 +39,9 @@ template<class T> static T decode(unsigned char *&ptr) {
 	return retval;
 }
 
+// check for C++ standard
+#define PRE_CPP17 (__cplusplus < 201703L)
+
 // ==========================
 // === Directory creation ===
 // ==========================
@@ -51,7 +54,7 @@ static void createDirectory(string dirname) {
 	struct stat st = { 0 };
 	if (stat(dirname.c_str(), &st) == -1) {
 		int val = mkdir(dirname.c_str());
-		if (val != 0){
+		if (val != 0) {
 			fail("directory creation failed");
 		}
 	}
@@ -466,6 +469,7 @@ public:
 
 		// human-readable summary in csv format
 		this->openHandle(this->directory + "/testlist.txt");
+		this->h.precision(9);
 		this->h << "TEST_NUM\tTEST_TXT\tUNITS\tLO_LIMIT\tHI_LIMIT\n";
 		for (auto it = testnums.begin(); it != testnums.end(); ++it) {
 			this->h << (*it) << "\t" //
@@ -860,11 +864,48 @@ bool isDotGz(string fname) {
 	return true;
 }
 
+//* determine whether the filename indicates .gz compressed
+bool isDotTxt(string fname) {
+	if (fname.length() < 4)
+		return false;
+	string ending = fname.substr(fname.length() - 4, 4);
+	if (ending.compare(".txt"))
+		return false; // differs
+	return true;
+}
+
+void buildFileList(int argc, char **argv, std::vector<string> &flist) {
+	for (int ixFile = 2; ixFile < argc; ++ixFile) {
+		string filename(argv[ixFile]);
+		if (isDotTxt(filename)) {
+			std::ifstream h(filename); // RAII auto-close
+			if (!h.is_open()) {
+				cerr << "failed to open '" << filename << " for read'\n";
+				fail("");
+			}
+			while (h >> filename)
+				if (filename.length() > 0)
+					flist.push_back(filename);
+		} else {
+			flist.push_back(filename);
+		}
+	}
+
+	// === try to open any input file ===
+	// so we don't fail unnecessarily in the middle of a long conversion job
+	for (auto it = flist.begin(); it != flist.end(); ++it) {
+		std::ifstream h(*it); // RAII auto-close
+		if (!h.is_open()) {
+			cerr << "failed to open '" << *it << " for read'\n";
+			fail("");
+		}
+	}
+}
+
 // ============
 // === main ===
 // ============
 int main(int argc, char **argv) {
-	cout.precision(9);
 	if (argc <= 2) {
 		cerr << "usage: " << argv[0] << " outputfolder inputfile.stdf.gz"
 				<< endl;
@@ -873,15 +914,17 @@ int main(int argc, char **argv) {
 	string dirname(argv[1]);
 	createDirectory(dirname);
 
-	// === multithreaded version (recommended) ===
+	std::vector<string> flist;
+	buildFileList(argc, argv, flist);
+
 	unsigned int nCirc = 65600 * 128; // max. read-ahead (performance parameter. This number gives best performance on 5 GB testcase)
 	unsigned int nChunkMax = 65535 + 4; // max. single pop size. STDF 4-byte header is not included in 16-bit count
 	pingPongMailbox<string> mailbox;
 
 	blockingCircBuf reader(nCirc, nChunkMax);
-	std::thread readerThread([&argv, &argc, &reader, &mailbox] {
-		for (int ixFile = 2; ixFile < argc; ++ixFile) {
-			string filename(argv[ixFile]);
+	std::thread readerThread([&flist, &reader, &mailbox] {
+		for (auto it = flist.begin(); it != flist.end(); ++it) {
+			string filename(*it);
 
 			// === wait for downstream processing to finish ===
 			// this thread owns the "PING" end of the mailbox
@@ -896,22 +939,22 @@ int main(int argc, char **argv) {
 
 			// === feed data ===
 #ifndef NO_LIBZ
-			if (isDotGz(filename))
-				main_readerDotGz(filename, reader);
-			else
+		if (isDotGz(filename))
+			main_readerDotGz(filename, reader);
+		else
 #endif
-				main_reader(filename, reader);
-			reader.setShutdown(true);
-		}
+		main_reader(filename, reader);
+	reader.setShutdown(true);
+}
 
-		while (mailbox.getState() != mailbox.PING) {
-			mailbox.wait();
-		}
+while (mailbox.getState() != mailbox.PING) {
+	mailbox.wait();
+}
 
-		// === notify downstream processing there is no more data ===
-		mailbox.setState(mailbox.PONG, /*agreed protocol: empty string => done*/
-		"");
-	});
+// === notify downstream processing there is no more data ===
+mailbox.setState(mailbox.PONG, /*agreed protocol: empty string => done*/
+"");
+}	);
 
 	stdfWriter writer(dirname);
 	std::thread recordParserThread([&reader, &writer, &mailbox] {
