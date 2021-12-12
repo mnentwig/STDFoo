@@ -303,12 +303,12 @@ protected:
 };
 
 // =======================
-// === perPartLoggable ===
+// === perItemLogger ===
 // =======================
 //* data logging for one testitem. Manages data validity efficiently using timestamps */
-template<class T> class perPartLoggable {
+template<class T> class perItemLogger {
 public:
-	perPartLoggable(std::string fname, T defVal) :
+	perItemLogger(std::string fname, T defVal) :
 			buf(fname) {
 		this->defVal = defVal;
 		this->nWritten = 0;
@@ -480,6 +480,8 @@ public:
 		}
 		this->closeHandle();
 	}
+
+	//* reports the end of an input file, how many DUTs it contains
 	void reportFile(string filename, unsigned int dutsPerFile) {
 		this->filenames.push_back(filename);
 		this->dutsPerFile.push_back(dutsPerFile);
@@ -516,11 +518,11 @@ public:
 			cmLog(dirname) {
 		this->directory = dirname;
 		this->nextValidCode = 1; // 0 is "invalid"
-		this->loggerSite = new perPartLoggable<uint8_t>(
+		this->loggerSite = new perItemLogger<uint8_t>(
 				dirname + "/" + "site.uint8", 255);
-		this->loggerHardbin = new perPartLoggable<uint16_t>(
+		this->loggerHardbin = new perItemLogger<uint16_t>(
 				dirname + "/" + "hardbin.uint16", 65535);
-		this->loggerSoftbin = new perPartLoggable<uint16_t>(
+		this->loggerSoftbin = new perItemLogger<uint16_t>(
 				dirname + "/" + "softbin.uint16", 65535);
 		this->dutCountBaseZero = 0;
 		this->dutsReported = 0;
@@ -613,13 +615,13 @@ public:
 
 		// === look up or create data structure ===
 		auto it = this->loggerTestitems.find(testnum);
-		perPartLoggable<float> *i;
+		perItemLogger<float> *i;
 		if (it != this->loggerTestitems.end()) {
 			i = it->second;
 		} else {
 			std::ostringstream tmp;
 			tmp << this->directory << "/" << testnum << ".float";
-			i = new perPartLoggable<float>(tmp.str(), std::nanf(""));
+			i = new perItemLogger<float>(tmp.str(), std::nanf(""));
 
 			this->loggerTestitems[testnum] = i;
 		}
@@ -701,13 +703,13 @@ protected:
 //* directory common to all written files
 	string directory;
 //* data loggers per TEST_NUM
-	std::unordered_map<unsigned int, perPartLoggable<float>*> loggerTestitems;
+	std::unordered_map<unsigned int, perItemLogger<float>*> loggerTestitems;
 //* log NUM_SITE per insertion
-	perPartLoggable<uint8_t> *loggerSite;
+	perItemLogger<uint8_t> *loggerSite;
 //* log HARD_BIN per insertion
-	perPartLoggable<uint16_t> *loggerHardbin;
+	perItemLogger<uint16_t> *loggerHardbin;
 //* log SOFT_BIN per insertion
-	perPartLoggable<uint16_t> *loggerSoftbin;
+	perItemLogger<uint16_t> *loggerSoftbin;
 //* timestamp to monitor PIR-PTR*n-PRR sequence, also to recognize whether data in loggers is valid (motivation: advancing one timestamp is faster than invalidating thousands of records)
 	unsigned int nextValidCode;
 //* timestamp per site for PIR-PTR*n-PRR sequence monitoring
