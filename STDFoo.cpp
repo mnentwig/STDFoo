@@ -302,6 +302,43 @@ protected:
 	bool createFile = true;
 };
 
+// =====================
+// === perFileLogger ===
+// =====================
+//* collects information written separately for each input file
+class perFileLogger {
+public:
+	perFileLogger() {
+	}
+	//* adds to csv list "key \t value \n"
+	template<class T> void add(string fileKey, string dataKey, T entry) {
+		std::stringstream ff;
+		ff << dataKey << "\t" << entry << "\n";
+		string e = ff.str();
+		auto it = this->data.find(fileKey);
+		if (it == this->data.end()) {
+			this->data[fileKey] = e;
+		} else {
+			this->data[fileKey] += e;
+		}
+	}
+	//* writes contents into folder, using each item's key as filename with underscore-filenum suffix
+	void write(string folder, int filenum) {
+		for (auto it = this->data.begin(); it != this->data.end(); ++it) {
+			string key = it->first;
+			string content = it->second;
+			std::stringstream ff;
+			ff << folder << "/" << key << "_" << filenum << ".txt";
+			string f = ff.str();
+			std::ofstream s(f); // RAII auto-close
+			s << content;
+		}
+		this->data.clear();
+	}
+protected:
+	std::unordered_map<string, string> data;
+};
+
 // =======================
 // === perItemLogger ===
 // =======================
@@ -526,6 +563,7 @@ public:
 				dirname + "/" + "softbin.uint16", 65535);
 		this->dutCountBaseZero = 0;
 		this->dutsReported = 0;
+		this->filenumBase1 = 1;
 	}
 
 	static string decodeString(unsigned char *&ptr) {
@@ -548,6 +586,37 @@ public:
 		switch (hdr) {
 		case 0 + (10 << 8): { // FAR
 			// do nothing...
+			break;
+		}
+		case 1 + (10 << 8): { // MIR
+			this->pwl.add("MIR", "SETUP_T", decode<uint32_t>(ptr));
+			this->pwl.add("MIR", "START_T", decode<uint32_t>(ptr));
+			this->pwl.add("MIR", "STAT_NUM", decode<uint8_t>(ptr));
+			this->pwl.add("MIR", "MODE_COD", decode<uint8_t>(ptr));
+			this->pwl.add("MIR", "RTST_COD", decode<uint8_t>(ptr));
+			this->pwl.add("MIR", "PROD_COD", decode<uint8_t>(ptr));
+			this->pwl.add("MIR", "BURN_TIM", decode<uint16_t>(ptr));
+			this->pwl.add("MIR", "CMOD_COD", decode<uint8_t>(ptr));
+			this->pwl.add("MIR", "LOT_ID", decodeString(ptr));
+			this->pwl.add("MIR", "PART_TYP", decodeString(ptr));
+			this->pwl.add("MIR", "NODE_NAM", decodeString(ptr));
+			this->pwl.add("MIR", "TSTR_TYP", decodeString(ptr));
+			this->pwl.add("MIR", "JOB_NAM", decodeString(ptr));
+			this->pwl.add("MIR", "JOB_REV", decodeString(ptr));
+			this->pwl.add("MIR", "SBLOT_ID", decodeString(ptr));
+			this->pwl.add("MIR", "OPER_NAM", decodeString(ptr));
+			this->pwl.add("MIR", "EXEC_TYP", decodeString(ptr));
+			this->pwl.add("MIR", "EXEC_VER", decodeString(ptr));
+			this->pwl.add("MIR", "TEST_COD", decodeString(ptr));
+			this->pwl.add("MIR", "TST_TEMP", decodeString(ptr));
+			this->pwl.add("MIR", "USER_TXT", decodeString(ptr));
+			this->pwl.add("MIR", "AUX_FILE ", decodeString(ptr));
+			this->pwl.add("MIR", "PKG_TYP", decodeString(ptr));
+			this->pwl.add("MIR", "FAMLY_ID", decodeString(ptr));
+			this->pwl.add("MIR", "DATE_COD", decodeString(ptr));
+			this->pwl.add("MIR", "FACIL_ID", decodeString(ptr));
+			this->pwl.add("MIR", "FLOOR_ID", decodeString(ptr));
+			this->pwl.add("MIR", "PROC_ID", decodeString(ptr));
 			break;
 		}
 		case 5 + (10 << 8): { // PIR
@@ -689,6 +758,8 @@ public:
 		this->cmLog.reportFile(filename,
 				this->dutCountBaseZero - this->dutsReported);
 		this->dutsReported = this->dutCountBaseZero;
+		this->pwl.write(directory, this->filenumBase1);
+		this->filenumBase1++;
 	}
 	~stdfWriter() {
 		for (auto it = this->loggerTestitems.begin();
@@ -719,6 +790,8 @@ protected:
 //* logger for non-per-DUT data e.g. testnames
 	commonLogger cmLog;
 	unsigned int dutsReported;
+	perFileLogger pwl;
+	unsigned int filenumBase1;
 };
 
 // =======================
@@ -973,7 +1046,8 @@ int main(int argc, char **argv) {
 				break;
 			}
 			main_writer(filename, reader, writer);
-			mailbox.setState(mailbox.PING, /*don't-care return payload*/"");
+			mailbox.setState(mailbox.PING, /*don't-care return payload*/
+			"");
 		}
 	}
 	);
