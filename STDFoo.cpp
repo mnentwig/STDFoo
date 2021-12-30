@@ -1,5 +1,5 @@
 // with recent compiler (default: C++17 or up)
-// g++ -O3 -DNDEBUG -o STDFoo.exe STDFoo.cpp -lz
+// g++ -O3 -DNDEBUG -o STDFoo.exe -static STDFoo.cpp -lz
 #include <vector>
 #include <set>
 #include <unordered_set>
@@ -19,6 +19,7 @@
 #include <cassert>
 #include <stdint.h>
 #include <stdlib.h>
+#include <type_traits> // std::is_same<T1,T2>::value
 using std::string;
 using std::cerr;
 using std::cout;
@@ -261,9 +262,11 @@ public:
 
 		} else {
 			// check for empty buffer _before_ opening the file
-			std::lock_guard<std::mutex> lk(this->m);
-			if (this->buffer[this->bufPrimary].size() < 1)
-				return false;
+			{
+				std::lock_guard<std::mutex> lk(this->m);
+				if (this->buffer[this->bufPrimary].size() < 1)
+					return false;
+			} // RAII lock ends: Release while opening the file
 			fhandle.open(this->filename,
 					std::ofstream::out | std::ofstream::binary
 							| std::ofstream::app);
@@ -275,16 +278,26 @@ public:
 		}
 		this->createFile = false;
 
-		std::vector<T> *b = &this->buffer[this->bufPrimary];
+		std::vector<T> *b;
 
-		{ // === swap buffers ===
+		{ // === swap buffers. Former primary buffer b becomes secondary ===
 			std::lock_guard<std::mutex> lk(this->m);
+			 b = &this->buffer[this->bufPrimary];
 			this->bufPrimary = (this->bufPrimary + 1) & 1;
-		} // RAII mutex
+		} // RAII lock ends
 
 		//=== write data ===
-		T *pFirstElem = &((*b)[0]);
-		fhandle.write((const char*) pFirstElem, b->size() * sizeof(T));
+		if (std::is_same<T, std::string>::value){
+			// write as string + newline
+			for (auto it = b->begin(); it != b->end(); ++it){
+				fhandle << *it << "\n";
+			}
+		} else {
+			// write binary
+			T *pFirstElem = &((*b)[0]);
+			fhandle.write((const char*) pFirstElem, b->size() * sizeof(T));
+		}
+
 		b->clear();
 		fhandle.close();
 		return true;
@@ -766,6 +779,8 @@ public:
 			it->second->close();
 		this->loggerSoftbin->close();
 		this->loggerHardbin->close();
+		this->loggerPartId->close();
+		this->loggerPartTxt->close();
 		this->loggerSite->close();
 		this->cmLog.close();
 	}

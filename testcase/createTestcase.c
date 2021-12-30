@@ -73,7 +73,7 @@ int main(int argc, char *argv[]){
     for (int site = 1; site <= siteMax; ++site) {
       // === write removal / result (binning) ===
       stdf_rec_prr a = { };
-      sprintf(buf, "xmyId%i", partId);
+      sprintf(buf, "xmyId%i", partId+(site-1));
       buf[0] = (unsigned char) strlen(buf);
       a.HEAD_NUM = 1;
       a.SITE_NUM = site;
