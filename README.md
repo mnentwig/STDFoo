@@ -36,6 +36,7 @@ A file with extension .txt containing a list of .stdf(.gz) files may be given at
 * hardbin.u16: The hardbin for each DUT
 * softbin.u16: The softbin for each DUT
 * site.u8: The site where each DUT was tested
+* PART_ID.txt, PART_TXT.txt: The corresponding fields from the PRR (per DUT)
 * testlist.txt: a human-readable / csv style summary with test numbers, names, units and limits
 * files.txt: list of files from command line
 * dutsPerFile.uint32: Number of duts in each file
@@ -55,6 +56,8 @@ Available functions show on the command line with tab completion for `o.`.
 * `o.DUTs.getSite()` Returns used test site.
 * `o.DUTs.getHardbin()` Returns final hardbin
 * `o.DUTs.getSoftbin()` Returns final softbin
+* `o.DUTs.getPartId()` Returns PART_ID
+* `o.DUTs.getPartTxt()` Returns PART_TXT
 
 * `o.tests. ...`: Methods return per-test data, sorted by ascending test numbers
 * `o.tests.getTestnums()` Testnumber
