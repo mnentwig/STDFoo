@@ -18,6 +18,8 @@ function o = STDFoo(folder)
     function r = DUTs_getHardbin() r = db.(key).hardbin; end
     function r = DUTs_getSoftbin() r = db.(key).softbin; end
     function r = DUTs_getSite() r = db.(key).site; end
+    function r = DUTs_getPartId() r = db.(key).partId; end
+    function r = DUTs_getPartTxt() r = db.(key).partTxt; end
     function r = files_getFiles() r = db.(key).files; end
     function r = files_getDutsPerFile() r = db.(key).dutsPerFile; end
 
@@ -33,6 +35,8 @@ function o = STDFoo(folder)
     db.(key).softbin = readBinary(folder, 'softbin.uint16', 'uint16');
     db.(key).site = readBinary(folder, 'site.uint8', 'uint8');
     db.(key).files = readString(folder, 'filenames.txt');
+    db.(key).partId = readString(folder, 'PART_ID.txt');
+    db.(key).partTxt = readString(folder, 'PART_TXT.txt');
     db.(key).dutsPerFile = readBinary(folder, 'dutsPerFile.uint32', 'uint32');
 
     o.DUTs.getResultByTestnum=@(varargin)DUTs_getResultByTestnum(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
@@ -45,11 +49,13 @@ function o = STDFoo(folder)
     o.DUTs.getHardbin=@DUTs_getHardbin;
     o.DUTs.getSoftbin=@DUTs_getSoftbin;
     o.DUTs.getSite=@DUTs_getSite;
+    o.DUTs.getPartId=@DUTs_getPartId;
+    o.DUTs.getPartTxt=@DUTs_getPartTxt;
     o.getnDUTs=@(varargin)getnDUTs(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
     o.files.getFiles=@files_getFiles;
     o.files.getDutsPerFile=@files_getDutsPerFile;
-  	o.files.getMaskByFileindex = @(varargin)files_getMaskByFileindex(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
-  	o.files.getFileindex = @(varargin)files_getFileindex(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
+    o.files.getMaskByFileindex = @(varargin)files_getMaskByFileindex(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
+    o.files.getFileindex = @(varargin)files_getFileindex(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
 end
 
 function r = getnDUTs(db, o) %db, o for object

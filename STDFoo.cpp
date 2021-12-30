@@ -561,6 +561,10 @@ public:
 				dirname + "/" + "hardbin.uint16", 65535);
 		this->loggerSoftbin = new perItemLogger<uint16_t>(
 				dirname + "/" + "softbin.uint16", 65535);
+		this->loggerPartId = new perItemLogger<string>(
+				dirname + "/" + "PART_ID.txt", "");
+		this->loggerPartTxt = new perItemLogger<string>(
+				dirname + "/" + "PART_TXT.txt", "");
 		this->dutCountBaseZero = 0;
 		this->dutsReported = 0;
 		this->filenumBase1 = 1;
@@ -633,7 +637,12 @@ public:
 			ptr += 3; // PART_FLG, NUM_TEST
 			unsigned int HARD_BIN = decode<uint16_t>(ptr);
 			unsigned int SOFT_BIN = decode<uint16_t>(ptr);
-			this->PRR(SITE_NUM, SOFT_BIN, HARD_BIN);
+			/*unsigned int X_COORD = */decode<uint16_t>(ptr);
+			/*unsigned int Y_COORD = */decode<uint16_t>(ptr);
+			/*unsigned int TEST_T = */decode<uint32_t>(ptr);
+			string PART_ID = decodeString(ptr);
+			string PART_TXT = decodeString(ptr);
+			this->PRR(SITE_NUM, SOFT_BIN, HARD_BIN, PART_ID, PART_TXT);
 			break;
 		}
 		case 15 + (10 << 8): { // PTR
@@ -698,7 +707,7 @@ public:
 		i->setData(site, this->siteValidCode[site], val);
 	}
 
-	void PRR(unsigned int site, uint16_t softbin, uint16_t hardbin) {
+	void PRR(unsigned int site, uint16_t softbin, uint16_t hardbin, string PART_ID, string PART_TXT) {
 		if (this->siteValidCode.size() <= site)
 			this->siteValidCode.resize(site + 1);
 		unsigned int validCode = this->siteValidCode[site];
@@ -709,9 +718,12 @@ public:
 			return;
 		}
 
+		// === data added by the PRR ===
 		this->loggerSoftbin->setData(site, validCode, softbin);
 		this->loggerHardbin->setData(site, validCode, hardbin);
 		this->loggerSite->setData(site, validCode, site);
+		this->loggerPartId->setData(site, validCode, PART_ID);
+		this->loggerPartTxt->setData(site, validCode, PART_TXT);
 
 		// === write data ===
 		for (auto it = this->loggerTestitems.begin();
@@ -721,6 +733,8 @@ public:
 		this->loggerSoftbin->write(site, this->dutCountBaseZero, validCode);
 		this->loggerHardbin->write(site, this->dutCountBaseZero, validCode);
 		this->loggerSite->write(site, this->dutCountBaseZero, validCode);
+		this->loggerPartId->write(site, this->dutCountBaseZero, validCode);
+		this->loggerPartTxt->write(site, this->dutCountBaseZero, validCode);
 
 		this->siteValidCode[site] = 0;
 
@@ -736,6 +750,8 @@ public:
 		retVal |= this->loggerSoftbin->flush();
 		retVal |= this->loggerHardbin->flush();
 		retVal |= this->loggerSite->flush();
+		retVal |= this->loggerPartId->flush();
+		retVal |= this->loggerPartTxt->flush();
 		return retVal;
 	}
 
@@ -769,6 +785,8 @@ public:
 		delete this->loggerSite;
 		delete this->loggerHardbin;
 		delete this->loggerSoftbin;
+		delete this->loggerPartId;
+		delete this->loggerPartTxt;
 	}
 protected:
 //* directory common to all written files
@@ -781,6 +799,10 @@ protected:
 	perItemLogger<uint16_t> *loggerHardbin;
 //* log SOFT_BIN per insertion
 	perItemLogger<uint16_t> *loggerSoftbin;
+//* log PART_ID per insertion
+	perItemLogger<string> *loggerPartId;
+//* log PART_TXT per insertion
+	perItemLogger<string> *loggerPartTxt;
 //* timestamp to monitor PIR-PTR*n-PRR sequence, also to recognize whether data in loggers is valid (motivation: advancing one timestamp is faster than invalidating thousands of records)
 	unsigned int nextValidCode;
 //* timestamp per site for PIR-PTR*n-PRR sequence monitoring
