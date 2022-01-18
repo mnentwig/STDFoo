@@ -56,8 +56,8 @@ Available functions show on the command line with tab completion for `o.`.
 * `o.DUTs.getSite()` Returns used test site.
 * `o.DUTs.getHardbin()` Returns final hardbin
 * `o.DUTs.getSoftbin()` Returns final softbin
-* `o.DUTs.getPartId()` Returns PART_ID
-* `o.DUTs.getPartTxt()` Returns PART_TXT
+* `o.DUTs.getPartId()` Returns PART_ID _Note: by necessity (file size) this can be the performance bottleneck working with large data sets_
+* `o.DUTs.getPartTxt()` Returns PART_TXT _Note: same as above, typically even worse_
 
 * `o.tests. ...`: Methods return per-test data, sorted by ascending test numbers
 * `o.tests.getTestnums()` Testnumber
