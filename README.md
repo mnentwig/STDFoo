@@ -119,4 +119,4 @@ If no `libz` is available, use -DNO_LIBZ. In this case, only uncompressed .stdf 
 Testitems should be "reasonably" consistent between files, because any DUT writes a NaN-result for any missing testitem. 
 If two sources of data are largely non-overlapping in testitem numbering, consider processing them individually into separate output folders.
 - Fast "row-wise" data extraction (all data for given DUTs) could be applied on the results using `fseek()` as the record size of the output binary data is fixed.
-- Octave (Matlab): Logical indexing is your friend! The performance penalty of not using (/understanding) it can be dramatic.
+- Octave (Matlab): Logical indexing is your friend! The performance penalty of not using it can be dramatic.
