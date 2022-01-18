@@ -5,7 +5,7 @@ b) Imports resulting binary data to Octave _efficiently_.
 
 Intended for very large datasets from multiple files, routinely used with 7-digit DUT count and 4-digit number of parametric test items.
 
-Output data is organized "column-major" (column=testitem/binning for all DUTs) so that any item of interest can be retrieved with near-optimal speed (=loading a binary file that contains only the test item for all DUTs).
+Output data is organized "column-major" (column=testitem/binning for all DUTs) so that any test item of interest can be retrieved with near-optimal speed (=loading a binary file that contains only said test item for all DUTs / seek() to DUT).
 
 * used STDF fields are *PIR* (insertion), *PTR* (individual test data), *PRR* (results/binning). Other records are largely skipped (some *MIR* contents are included for lot / retest information)
 * pure C++, needs only a recent compiler e.g. from MinGW
