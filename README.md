@@ -3,7 +3,7 @@ a) Converts ATE .stdf(.gz) to binary float data, one file per TEST_NUM.
 
 b) Imports resulting binary data to Octave _efficiently_.
 
-Intended for very large datasets from multiple files. 
+Intended for very large datasets from multiple files, routinely used with 7-digit DUT count and 4-digit number of parametric test items.
 
 Output data is organized "column-major" (column=testitem/binning for all DUTs) so that any item of interest can be retrieved with near-optimal speed (=loading a binary file that contains only the test item for all DUTs).
 
