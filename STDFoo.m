@@ -18,6 +18,14 @@ function o = STDFoo(folder)
         r = db.(key).testnames; 
         if (nargin > 0) r = r(index); end 
     end
+    function r = tests_getTestname(testnum)
+        assert(numel(testnum) == 1, 'need scalar testnum argument');
+        mask = db.(key).testnums == testnum;
+        assert(sum(mask) > 0, 'test with testnum not found');
+        assert(sum(mask) == 1, 'more than one test with testnum (invalid data!)');
+        r = db.(key).testnames{mask}; 
+    end
+    
     function r = tests_getUnits(index) 
         r = db.(key).units; 
         if (nargin > 0) r = r(index); end 
@@ -42,11 +50,18 @@ function o = STDFoo(folder)
         r = db.(key).site; 
         if (nargin > 0) r = r(index); end
     end
-    function r = DUTs_getPartId(index) 
+    function r = DUTs_getPartId(index)
+        if (~isfield(db.(key), 'partId'))
+            db.(key).partId = readString(folder, 'PART_ID.txt');
+        end
+        
         r = db.(key).partId; 
         if (nargin > 0) r = r(index); end 
     end
     function r = DUTs_getPartTxt(index) 
+        if (~isfield(db.(key), 'partTxt'))
+            db.(key).partTxt = readString(folder, 'PART_TXT.txt');
+        end
         r = db.(key).partTxt; 
         if (nargin > 0) r = r(index); end
     end
@@ -71,13 +86,12 @@ function o = STDFoo(folder)
     db.(key).softbin = readBinary(folder, 'softbin.uint16', 'uint16');
     db.(key).site = readBinary(folder, 'site.uint8', 'uint8');
     db.(key).files = readString(folder, 'filenames.txt');
-    db.(key).partId = readString(folder, 'PART_ID.txt');
-    db.(key).partTxt = readString(folder, 'PART_TXT.txt');
     db.(key).dutsPerFile = readBinary(folder, 'dutsPerFile.uint32', 'uint32');
 
     o.DUTs.getResultByTestnum=@(varargin)DUTs_getResultByTestnum(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
     o.DUTs.uncacheResultByTestnum=@(varargin)DUTs_uncacheResultByTestnum(db, o, varargin{:}); % boilerplate wrapper prepending db, o args
     o.tests.getTestnums=@tests_getTestnums;
+    o.tests.getTestname=@tests_getTestname;
     o.tests.getTestnames=@tests_getTestnames;
     o.tests.getUnits=@tests_getUnits;
     o.tests.getLowLim=@tests_getLowLim;
@@ -175,18 +189,14 @@ end
     
 % reads newline-separated file into cell array of strings
 function celldata = readString(folder, fname)
-    celldata = {};
     fname = [folder, '/', fname];
     h = fopen(fname, 'rb');
     if (h < 0)
         error('failed to open "%s"', fname);
     end
-    while (true)
-        line = fgetl(h);
-        if (line == -1) 
-            break; 
-        end
-        celldata{end+1, 1} = line;  
-    end
+    tmp = fread(h, [1, Inf], 'char=>char');
     fclose(h);
+    celldata = strsplit(tmp, char(10), 'collapsedelimiters', false).';
+    assert(isempty(celldata{end}), 'expecting newline termination after last line');
+    celldata(end) = [];
 end

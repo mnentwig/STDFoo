@@ -61,6 +61,8 @@ Available functions show on the command line with tab completion for `o.`.
 
 * `o.tests. ...`: Methods return per-test data, sorted by ascending test numbers
 * `o.tests.getTestnums()` Testnumber
+* `o.tests.getTestnames()` Test description (same order as getTestnums, cell array of strings)
+* `o.tests.getTestname(testnum)` Test description, identified by scalar test number, single string
 * `o.tests.getUnits()` Cellarray of all units, matching order in above testnumber. Note: STDF strips scaling factors. E.g. Nano-, Micro-, Milliamperes will all report as "A" with results in Amperes.
 * `o.tests.getLowLim()` Low limit of each test (taken from first PTR record where it appeared). Above comment on unscaled / SI units applies.
 * `o.tests.getHighLim()` High limit of each test.  Above comment on unscaled / SI units applies.

@@ -30,6 +30,9 @@ function exampleAndSelftest()
 
   testnames = o.tests.getTestnames();
   assert(size(testnames) == [nTests, 1]);
+
+  tn = o.tests.getTestname(12);
+  assert(tn == 'ThisIsTheTestdescriptionWhichIsRepeatedManyTimesForTest12');
   
   units = o.tests.getUnits();
   assert(size(units) == [nTests, 1]);
