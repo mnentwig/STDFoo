@@ -15,8 +15,8 @@ Output data is organized "column-major" (column=testitem/binning for all DUTs) s
 * Scalable: processing time scales linearly with file size, constant small memory footprint
 * compatible/future-proof: Compiles with -std=(c++11, c++17, c++20, c++23)
 * "Simple and stupid, robust and reliable" mindset for usage and build process 
-_Time will tell whether this has been accomplished_
-* Use of Octave end is optional.
+_Time will tell whether this has been accomplished ... Update 01/22 looking good so far_ 
+* Use of Octave end is optional (alternatively, use "fread" equivalent from any language to access binary data)
 
 ### Command line arguments: 
 ```
