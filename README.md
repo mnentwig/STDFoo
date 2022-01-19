@@ -5,7 +5,7 @@ b) Imports resulting binary data to Octave _efficiently_.
 
 Intended for very large datasets from multiple files, routinely used with 7-digit DUT count and 4-digit number of parametric test items.
 
-Output data is organized "column-major" (column=testitem/binning for all DUTs) so that any test item of interest can be retrieved with near-optimal speed (=loading a binary file that contains only said test item for all DUTs / seek() to DUT).
+Numeric output data is organized "one file per item, one record (e.g. 32-bit float) per DUT") allowing fast access with reasonable complexity (binary block read of test item file, possibly picking individual duts via seek()).
 
 * used STDF fields are *PIR* (insertion), *PTR* (individual test data), *PRR* (results/binning). Other records are largely skipped (some *MIR* contents are included for lot / retest information)
 * pure C++, needs only a recent compiler e.g. from MinGW
@@ -82,10 +82,10 @@ Opens a 'handle' o to the output directory of STDFoo.exe. Hint, use tab completi
 ```
 data = o.DUTs.getResultByTestnum(2345);     % retrieve DUT data for test number 2345
 dutNum = 1 : numel(data);                   % x vector for plot
-figure(); plot(dutNum, data, 'xk'); hold on;% plot time series of all DUTs as black 'x' (missing entries => NaN => omitted)
+figure(); plot(dutNum, data, '+k'); hold on;% plot time series of all DUTs as black '+' (missing entries => NaN => omitted)
 sbin = o.DUTs.getSoftbin();                 % get softbin result
 mask = sbin == 1234;                        % set up a logical mask that isolates softbin 1234
-plot(dutNum(mask), data(mask), 'xk');       % re-plot DUTs that went into softbin 1234 with a red '+'
+plot(dutNum(mask), data(mask), 'xr');       % re-plot DUTs that went into softbin 1234 with a red 'x'
 yield_perc = 100*sum(sbin==1)/numel(sbin)   % calculates yield (assuming soft bin 1 means 'pass')
 ```
 
