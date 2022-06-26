@@ -27,7 +27,7 @@ testcaseSmall.stdf.gz:
 	@echo "Zipping STDF file. This may take a while"
 	gzip testcaseSmall.stdf
 
-tests: STDFoo.exe testcase.stdf.gz
+tests: STDFoo.exe testcaseSmall.stdf.gz
 	@echo "testcaseSmall.stdf.gz" > testjobs.txt
 	@echo "testcaseSmall.stdf.gz" >> testjobs.txt
 	./STDFoo.exe out1 testcase.stdf.gz testjobs.txt
@@ -40,6 +40,10 @@ compat:
 	g++ -static -o STDFoo.exe -std=c++17 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
 	g++ -static -o STDFoo.exe -std=c++20 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
 	g++ -static -o STDFoo.exe -std=c++23 -O3 -DNODEBUG -Wall STDFoo.cpp -lz
+
+example1.exe: STDFoo.exe examples/example1.cpp
+	./STDFoo.exe outSmall testcaseSmall.stdf.gz
+	g++ -o example1.exe -std=c++11 -static -Wall -Weffc++ examples/example1.cpp
 
 clean:
 	rm -Rf STDFoo.exe createTestcase.exe out1 out2 testcase.stdf STDFooRefimpl.exe testjobs.txt
