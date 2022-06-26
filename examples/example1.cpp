@@ -6,6 +6,7 @@
 #include <fstream> // for _complete_ ifstream
 #include <stdexcept>
 #include <cassert>
+#include <cmath>
 using std::string;
 using std::vector;
 using std::runtime_error;
@@ -90,7 +91,7 @@ vector<bool> calcPassFailMask(const string &fname, float lowLim, float highLim) 
 	result.reserve(data.size());
 
 	for (auto v : data)
-		result.push_back((v >= lowLim) && (v <= highLim));
+		result.push_back(std::isnan(v) || ((v >= lowLim) && (v <= highLim))); // nan: missing data (test does not exist in one .stdf file among several) => pass
 	return result;
 }
 
@@ -99,10 +100,8 @@ int main() {
 	vector<string> lines = file2str("examples/myLimits.txt");
 	typedef vector<bool> failMask_t;
 
-	// results for multi-threaded evaluation ===
-	vector<future<failMask_t>> evalResults;
-
-	// === iterate over limits file ===
+	// iterate over limits ===
+	vector<future<failMask_t>> evalResults; // multi-threaded results
 	for (auto line : lines) {
 		// === split by separator ===
 		// example uses comma
@@ -125,6 +124,7 @@ int main() {
 		// cout << testnum << "\t" << lowLim << "\t" << highLim << "\n";
 
 		// === run limits check in the background ===
+		// parallelizes slow loading of large data files
 		string fname = "outSmall/" + std::to_string(testnum) + ".float";
 		evalResults.push_back(std::async(calcPassFailMask, fname, lowLim, highLim));
 	}
