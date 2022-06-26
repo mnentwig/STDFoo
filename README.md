@@ -72,7 +72,7 @@ Available functions show on the command line with tab completion for `o.`.
 * `o.files.getDutsPerFile()` DUT count per file
 * `o.files.getMaskByFileindex(fileindex)` returns a logical mask to operate on `o.DUTS. ...` data for the given file only.
 * `o.files.getFileindex()` returns filenumber for each dut (1, 2, ...). Note, this would be the memory bottleneck for very high e.g. 100M DUT count. Use _mask_ function in this case.
-* `o.getnDUTs()` Total count of tested parts (equals lenght of any `o.DUTs. ...` result)
+* `o.getnDUTs()` Total count of tested parts (equals length of any `o.DUTs. ...` result)
 
 ### Octave examples
 ```
