@@ -8,6 +8,7 @@
 #include <mutex>
 #include <set>
 #include <sstream>
+#include <string>  // memcpy
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -107,10 +108,12 @@ class circBuf {
 
         if (this->ixPush < this->nContigRead) {
             // we wrote to the head of the regular buffer.
-            // Replicate into the circular extension.
-            int nCopy = this->nContigRead - this->ixPush;
-            memcpy(/*dest*/ this->buf + this->nCirc + this->ixPush, /*src*/
-                   this->buf + this->ixPush, /*size*/ nCopy);
+            // Replicate into the circular extension (which is of length nContigRead-1)
+            int nCopy = this->nContigRead - 1 - this->ixPush;
+            memcpy(  //
+                /*dest*/ this->buf + this->nCirc + this->ixPush,
+                /*src*/ this->buf + this->ixPush,
+                /*size*/ nCopy);
         }
 
         this->ixPush += n;  // points now to end of new data
