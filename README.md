@@ -58,6 +58,8 @@ Available functions show on the command line with tab completion for `o.`.
 * `o.DUTs.getSoftbin()` Returns final softbin
 * `o.DUTs.getPartId()` Returns PART_ID _Note: by necessity (file size) this can be the performance bottleneck working with large data sets_
 * `o.DUTs.getPartTxt()` Returns PART_TXT _Note: same as above, typically even worse_
+* `o.DUTs.getFileindex()` returns filenumber for each dut (1, 2, ...). Note, this would be the memory bottleneck for very high e.g. 100M DUT count. Use _mask_ function in this case.
+* `o.DUTs.getIndexInFile()` returns position (base 1) of DUT in its file
 
 * `o.tests. ...`: Methods return per-test data, sorted by ascending test numbers
 * `o.tests.getTestnums()` Testnumber
@@ -71,8 +73,6 @@ Available functions show on the command line with tab completion for `o.`.
 * `o.files.getFiles()` gets filenames
 * `o.files.getDutsPerFile()` DUT count per file
 * `o.files.getMaskByFileindex(fileindex)` returns a logical mask to operate on `o.DUTS. ...` data for the given file only.
-* `o.files.getFileindex()` returns filenumber for each dut (1, 2, ...). Note, this would be the memory bottleneck for very high e.g. 100M DUT count. Use _mask_ function in this case.
-* `o.files.getIndexInFile()` returns position (base 1) of DUT in its file
 * `o.getnDUTs()` Total count of tested parts (equals length of any `o.DUTs. ...` result)
 
 Many functions take an "index" argument (logical mask or index vector), which is applied on the return value.
