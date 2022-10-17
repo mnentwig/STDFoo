@@ -1,5 +1,5 @@
 function exampleAndSelftest()
-  % the main purpose of this file is to exercise all functions.
+  %  the main purpose of this file is to exercise all functions.
 
   % convert selftest sample file twice into 'out' folder
   system('STDFoo.exe out testcaseSmall.stdf.gz testcaseSmall.stdf.gz');
