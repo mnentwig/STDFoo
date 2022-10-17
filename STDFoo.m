@@ -1,5 +1,9 @@
 function o = STDFoo(folder)
-% handle-based storage
+    if (nargin < 1 || !ischar(folder))
+        error('usage: STDFoo(folder) where folder argument (string) points to the output folder from STDFoo.exe e.g. result of STDFoo.exe folder file1.stdf file2.stdf...)');
+    end
+    
+    % handle-based storage
     persistent db = struct();
     
     % === closure (effectively) over "key", "folder", "o" starts here ===
